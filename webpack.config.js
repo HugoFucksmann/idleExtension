@@ -1,43 +1,53 @@
 const path = require("path");
 
 module.exports = {
+  target: "node",
   entry: {
     extension: "./extension.ts",
     webview: "./webview.jsx",
   },
   output: {
-    filename: "[name].js",
     path: path.resolve(__dirname, "out"),
+    filename: "[name].js",
     libraryTarget: "commonjs2",
+    devtoolModuleFilenameTemplate: "../[resource-path]",
   },
   devtool: "source-map",
+  externals: {
+    vscode: "commonjs vscode",
+    child_process: "commonjs child_process",
+    path: "commonjs path",
+  },
+  resolve: {
+    extensions: [".ts", ".tsx", ".js", ".jsx"],
+  },
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
-        use: "ts-loader",
+        use: [
+          {
+            loader: "ts-loader",
+          },
+        ],
       },
       {
-        test: /\.(js|jsx)$/,
+        test: /\.jsx?$/,
         exclude: /node_modules/,
-        use: {
-          loader: "babel-loader",
-          options: {
-            presets: ["@babel/preset-env", "@babel/preset-react"],
+        use: [
+          {
+            loader: "babel-loader",
+            options: {
+              presets: ["@babel/preset-react"],
+            },
           },
-        },
+        ],
       },
       {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
       },
     ],
-  },
-  resolve: {
-    extensions: [".ts", ".js", ".jsx"],
-  },
-  externals: {
-    vscode: "commonjs vscode",
   },
 };
