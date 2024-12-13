@@ -45,39 +45,46 @@ class AIChatViewProvider {
   }
 
   async sendToOllama(userMessage) {
-    // Termina cualquier proceso existente antes de iniciar uno nuevo
     if (this._currentProcess) {
       this._currentProcess.kill();
     }
 
-    // Inicia un nuevo proceso
     this._currentProcess = spawn("ollama", ["run", "qwen2.5-coder:7b"], {
       shell: true,
     });
 
-    let fullResponse = ""; // Almacena la respuesta completa
-    let buffer = ""; // Almacena datos parciales
+    let fullResponse = "";
+    let buffer = "";
 
     try {
       this._currentProcess.stdin.write(userMessage + "\n");
       this._currentProcess.stdin.end();
 
-      // Maneja la salida estándar
+      // Acumulamos toda la respuesta sin enviar mensajes parciales
       this._currentProcess.stdout.on("data", (data) => {
         const text = data.toString();
         buffer += text;
+      });
 
-        // Procesa líneas completas
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // La última línea puede estar incompleta
+      // Maneja el cierre del proceso
+      this._currentProcess.on("close", (code) => {
+        console.log(`Ollama finalizó con código ${code}`);
 
-        if (lines.length > 0) {
-          fullResponse += lines.join("\n") + "\n";
+        if (code === 0) {
+          // Enviamos la respuesta completa en un solo mensaje
           this._view.webview.postMessage({
             type: "response",
-            message: fullResponse,
+            message: buffer,
+          });
+        } else {
+          this._view.webview.postMessage({
+            type: "error",
+            message:
+              "El modelo no pudo procesar el mensaje. Intenta nuevamente más tarde.",
           });
         }
+
+        this._currentProcess = null;
       });
 
       // Maneja errores del proceso
@@ -92,29 +99,6 @@ class AIChatViewProvider {
           type: "error",
           message: "Error al iniciar Ollama. Verifica que esté instalado.",
         });
-      });
-
-      // Maneja el cierre del proceso
-      this._currentProcess.on("close", (code) => {
-        console.log(`Ollama finalizó con código ${code}`);
-        if (buffer) {
-          fullResponse += buffer; // Agrega cualquier dato restante
-        }
-
-        if (code !== 0) {
-          this._view.webview.postMessage({
-            type: "error",
-            message:
-              "El modelo no pudo procesar el mensaje. Intenta nuevamente más tarde.",
-          });
-        } else {
-          this._view.webview.postMessage({
-            type: "response",
-            message: fullResponse,
-          });
-        }
-
-        this._currentProcess = null;
       });
     } catch (error) {
       console.error("Error inesperado:", error);

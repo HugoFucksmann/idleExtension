@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
 import "prismjs/components/prism-javascript";
 
 const styles = {
@@ -27,11 +28,15 @@ const styles = {
   },
   error: {
     color: "var(--vscode-errorForeground)",
-    padding: "8px",
-    marginBottom: "10px",
-    borderRadius: "4px",
     backgroundColor: "var(--vscode-inputValidation-errorBackground)",
     border: "1px solid var(--vscode-inputValidation-errorBorder)",
+  },
+  codeBlock: {
+    backgroundColor: "var(--vscode-editor-background)",
+    border: "1px solid var(--vscode-input-border)",
+    borderRadius: "4px",
+    padding: "8px",
+    margin: "8px 0",
   },
 };
 
@@ -51,7 +56,7 @@ function parseMessage(message) {
     parts.push({
       type: "code",
       language: match[1] || "javascript",
-      content: match[2],
+      content: match[2].trim(),
     });
     lastIndex = match.index + match[0].length;
   }
@@ -64,20 +69,22 @@ function parseMessage(message) {
 }
 
 function MessagePart({ part }) {
+  useEffect(() => {
+    if (part.type === "code") {
+      Prism.highlightAll();
+    }
+  }, [part]);
+
   if (part.type === "code") {
-    const highlightedCode = Prism.highlight(
-      part.content,
-      Prism.languages[part.language] || Prism.languages.javascript,
-      part.language
-    );
     return (
-      <pre>
-        <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-      </pre>
+      <div style={styles.codeBlock}>
+        <pre>
+          <code className={`language-${part.language}`}>{part.content}</code>
+        </pre>
+      </div>
     );
-  } else {
-    return <p>{part.content}</p>;
   }
+  return <p>{part.content}</p>;
 }
 
 function ChatMessages({ messages, isLoading }) {
@@ -106,7 +113,6 @@ function ChatMessages({ messages, isLoading }) {
             : parseMessage(msg.text).map((part, i) => (
                 <MessagePart key={i} part={part} />
               ))}
-          {msg.isPartial && <span style={{ marginLeft: "5px" }}>...</span>}
         </div>
       ))}
       {isLoading && <div style={styles.aiMessage}>AI is thinking...</div>}
