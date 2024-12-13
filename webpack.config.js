@@ -1,14 +1,23 @@
 const path = require("path");
 
 module.exports = {
-  entry: "./webview.jsx",
+  entry: {
+    extension: "./extension.ts",
+    webview: "./webview.jsx",
+  },
   output: {
-    filename: "webview.js",
+    filename: "[name].js",
     path: path.resolve(__dirname, "out"),
+    libraryTarget: "commonjs2",
   },
   devtool: "source-map",
   module: {
     rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: "ts-loader",
+      },
       {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
@@ -26,6 +35,9 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: [".js", ".jsx"],
+    extensions: [".ts", ".js", ".jsx"],
+  },
+  externals: {
+    vscode: "commonjs vscode",
   },
 };
