@@ -1,5 +1,7 @@
 import { spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,16 +25,129 @@ interface ResponseMetrics {
   duration: string;
 }
 
+interface ChatHistory {
+  id: string;
+  timestamp: string;
+  messages: Message[];
+  summary?: string;
+}
+
 export class OllamaService {
   private _controller: AbortController | null = null;
   private _conversationHistory: Message[] = [];
   private readonly MAX_TOKENS = 12000;
   private _totalTokens = 0;
+  private _historyPath: string;
+  private _currentChatId: string;
 
-  private formatConversation(): string {
-    return this._conversationHistory
-      .map((msg) => `${msg.role}: ${msg.content}`)
-      .join("\n\n");
+  constructor(context: vscode.ExtensionContext) {
+    if (!fs.existsSync(context.globalStoragePath)) {
+      fs.mkdirSync(context.globalStoragePath, { recursive: true });
+    }
+
+    this._historyPath = path.join(
+      context.globalStoragePath,
+      "chat-history.json"
+    );
+    this._currentChatId = this.generateChatId();
+    this.ensureHistoryFileExists();
+  }
+
+  private generateChatId(): string {
+    return Date.now().toString();
+  }
+
+  private ensureHistoryFileExists() {
+    try {
+      if (!fs.existsSync(this._historyPath)) {
+        fs.writeFileSync(
+          this._historyPath,
+          JSON.stringify([], null, 2),
+          "utf-8"
+        );
+      }
+    } catch (error) {
+      console.error("Error creating history file:", error);
+      fs.writeFileSync(this._historyPath, "[]", "utf-8");
+    }
+  }
+
+  private async saveToHistory() {
+    try {
+      let history: ChatHistory[] = [];
+      if (fs.existsSync(this._historyPath)) {
+        const content = fs.readFileSync(this._historyPath, "utf-8");
+        history = JSON.parse(content);
+      }
+
+      // Buscar chat existente o crear uno nuevo
+      const existingChatIndex = history.findIndex(
+        (chat) => chat.id === this._currentChatId
+      );
+      const chatHistory: ChatHistory = {
+        id: this._currentChatId,
+        timestamp: new Date().toISOString(),
+        messages: this._conversationHistory,
+        summary: this.generateSummary(),
+      };
+
+      if (existingChatIndex >= 0) {
+        history[existingChatIndex] = chatHistory;
+      } else {
+        history.push(chatHistory);
+      }
+
+      fs.writeFileSync(this._historyPath, JSON.stringify(history, null, 2));
+    } catch (error) {
+      console.error("Error saving chat history:", error);
+    }
+  }
+
+  private generateSummary(): string {
+    // Tomar el primer mensaje del usuario como resumen
+    const firstUserMessage = this._conversationHistory.find(
+      (msg) => msg.role === "user"
+    );
+    if (firstUserMessage) {
+      // Limitar a 50 caracteres
+      return (
+        firstUserMessage.content.slice(0, 50) +
+        (firstUserMessage.content.length > 50 ? "..." : "")
+      );
+    }
+    return "Nueva conversación";
+  }
+
+  async loadChatHistory(): Promise<ChatHistory[]> {
+    try {
+      if (fs.existsSync(this._historyPath)) {
+        const content = fs.readFileSync(this._historyPath, "utf-8");
+        return JSON.parse(content);
+      }
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+    }
+    return [];
+  }
+
+  loadChat(chatId: string) {
+    try {
+      const history = fs.readFileSync(this._historyPath, "utf-8");
+      const chats: ChatHistory[] = JSON.parse(history);
+      const chat = chats.find((c) => c.id === chatId);
+      if (chat) {
+        this._currentChatId = chatId;
+        this._conversationHistory = chat.messages;
+        this._totalTokens = chat.messages.reduce(
+          (total, msg) => total + (msg.tokens || 0),
+          0
+        );
+        return true;
+      }
+    } catch (error) {
+      console.error("Error loading chat:", error);
+    }
+    return false;
   }
 
   private addToHistory(
@@ -44,6 +159,19 @@ export class OllamaService {
     if (tokens) {
       this._totalTokens += tokens;
     }
+    this.saveToHistory();
+  }
+
+  clearConversation() {
+    this._conversationHistory = [];
+    this._totalTokens = 0;
+    this._currentChatId = this.generateChatId();
+  }
+
+  private formatConversation(): string {
+    return this._conversationHistory
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n\n");
   }
 
   private trimConversationHistory() {
@@ -180,8 +308,7 @@ export class OllamaService {
     }
   }
 
-  clearConversation() {
-    this._conversationHistory = [];
-    this._totalTokens = 0;
+  getCurrentMessages(): Message[] {
+    return this._conversationHistory;
   }
 }
