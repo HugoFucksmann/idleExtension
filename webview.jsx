@@ -4,8 +4,6 @@ import Header from "./Components/Header";
 import ChatMessages from "./Components/ChatMessages";
 import ChatInput from "./Components/InputChat/ChatInput";
 
-
-
 const vscode = acquireVsCodeApi();
 
 const styles = {
@@ -22,33 +20,42 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState("");
 
   useEffect(() => {
     const handleMessage = (event) => {
-      console.log("Mensaje recibido:", event.data);
-      const { type, message } = event.data;
+      const message = event.data;
 
-      if (type === "response") {
+      if (message.type === "response") {
+        if (!message.done) {
+          setCurrentMessage((prev) => prev + message.message);
+        } else {
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            { text: currentMessage + message.message, isUser: false },
+          ]);
+          setCurrentMessage("");
+          setIsLoading(false);
+
+          if (message.metrics) {
+            console.log(`Tokens generados: ${message.metrics.tokensGenerated}`);
+            console.log(`Tokens totales: ${message.metrics.totalTokens}`);
+            console.log(`Duración: ${message.metrics.duration}ms`);
+          }
+        }
+      } else if (message.type === "error") {
         setMessages((prevMessages) => [
           ...prevMessages,
-          { text: message, isUser: false },
+          { text: message.message, isUser: false, isError: true },
         ]);
         setIsLoading(false);
-      } else if (type === "error") {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { text: message, isUser: false, isError: true },
-        ]);
-        setIsLoading(false);
+        setCurrentMessage("");
       }
     };
 
     window.addEventListener("message", handleMessage);
-
-    return () => {
-      window.removeEventListener("message", handleMessage);
-    };
-  }, []);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [currentMessage]);
 
   const sendMessage = () => {
     if (input.trim() !== "" && !isLoading) {
@@ -58,6 +65,7 @@ function Chat() {
       ]);
       setInput("");
       setIsLoading(true);
+      setCurrentMessage("");
 
       vscode.postMessage({ type: "sendMessage", message: input });
     }
@@ -66,7 +74,11 @@ function Chat() {
   return (
     <div style={styles.container}>
       <Header />
-      <ChatMessages messages={messages} isLoading={isLoading} />
+      <ChatMessages
+        messages={messages}
+        isLoading={isLoading}
+        currentMessage={currentMessage}
+      />
       <ChatInput
         input={input}
         setInput={setInput}

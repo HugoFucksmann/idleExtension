@@ -87,7 +87,7 @@ function MessagePart({ part }) {
   return <p>{part.content}</p>;
 }
 
-function ChatMessages({ messages, isLoading }) {
+function ChatMessages({ messages, isLoading, currentMessage }) {
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -95,7 +95,7 @@ function ChatMessages({ messages, isLoading }) {
       chatContainerRef.current.scrollTop =
         chatContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, currentMessage]);
 
   return (
     <div ref={chatContainerRef} style={styles.chatContainer}>
@@ -115,7 +115,15 @@ function ChatMessages({ messages, isLoading }) {
               ))}
         </div>
       ))}
-      {isLoading && <div style={styles.aiMessage}>AI is thinking...</div>}
+      {isLoading && (
+        <div style={styles.aiMessage}>
+          {currentMessage
+            ? parseMessage(currentMessage).map((part, i) => (
+                <MessagePart key={i} part={part} />
+              ))
+            : "AI is thinking..."}
+        </div>
+      )}
     </div>
   );
 }
