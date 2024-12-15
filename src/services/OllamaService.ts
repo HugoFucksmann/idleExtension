@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import { modelConfig } from "../config/modelConfig";
 
 interface Message {
   role: "user" | "assistant";
@@ -35,7 +36,7 @@ interface ChatHistory {
 export class OllamaService {
   private _controller: AbortController | null = null;
   private _conversationHistory: Message[] = [];
-  private readonly MAX_TOKENS = 12000;
+  private readonly MAX_TOKENS = modelConfig.maxTokens;
   private _totalTokens = 0;
   private _historyPath: string;
   private _currentChatId: string;
@@ -198,46 +199,25 @@ export class OllamaService {
     const signal = this._controller.signal;
 
     try {
-      // Primero obtenemos los tokens del mensaje del usuario
-      const tokenCountResponse = await fetch(
-        "http://localhost:11434/api/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "qwen2.5-coder:7b",
-            prompt: userMessage,
-            stream: false,
-          }),
-          signal,
-        }
-      );
-
-      const tokenData = (await tokenCountResponse.json()) as TokenResponse;
-      const userTokens = tokenData.eval_count;
-
-      // Agregamos el mensaje del usuario con sus tokens
-      this.addToHistory("user", userMessage, userTokens);
+      this.addToHistory("user", userMessage);
       this.trimConversationHistory();
 
       const fullPrompt = this.formatConversation();
 
-      // Resto de la lógica para obtener la respuesta del modelo
-      const response = await fetch("http://localhost:11434/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "qwen2.5-coder:7b",
-          prompt: fullPrompt,
-          stream: true,
-          context_length: this.MAX_TOKENS,
-        }),
-        signal,
-      });
+      const response = await fetch(
+        `${modelConfig.baseUrl}${modelConfig.apiEndpoint}`,
+        {
+          method: "POST",
+          headers: modelConfig.defaultHeaders,
+          body: JSON.stringify({
+            model: modelConfig.name,
+            prompt: fullPrompt,
+            stream: true,
+            context_length: modelConfig.contextLength,
+          }),
+          signal,
+        }
+      );
 
       if (!response.ok || !response.body) {
         throw new Error(`Error en la respuesta: ${response.statusText}`);
@@ -245,11 +225,6 @@ export class OllamaService {
 
       const reader = response.body.getReader();
       let buffer = "";
-      let metrics: ResponseMetrics = {
-        tokensGenerated: 0,
-        totalTokens: this._totalTokens,
-        duration: "0",
-      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -262,34 +237,16 @@ export class OllamaService {
           const data = JSON.parse(line);
           buffer += data.response;
 
-          if (data.done) {
-            metrics = {
-              tokensGenerated: data.eval_count,
-              totalTokens: this._totalTokens + data.eval_count,
-              duration: (data.total_duration / 1000000000).toFixed(2),
-            };
-
-            console.log(`Tokens del usuario: ${userTokens}`);
-            console.log(
-              `Tokens generados en la respuesta: ${metrics.tokensGenerated}`
-            );
-            console.log(
-              `Tokens totales en la conversación: ${metrics.totalTokens}`
-            );
-            console.log(`Duración: ${metrics.duration}s`);
-          }
-
           if (view) {
             view.webview.postMessage({
               type: "response",
               message: data.response,
               done: data.done,
-              metrics: data.done ? metrics : undefined,
             });
           }
 
           if (data.done) {
-            this.addToHistory("assistant", buffer, data.eval_count);
+            this.addToHistory("assistant", buffer);
             this.trimConversationHistory();
           }
         }
