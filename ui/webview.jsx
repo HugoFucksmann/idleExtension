@@ -20,55 +20,34 @@ const styles = {
 
 function Chat() {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [isNewChat, setIsNewChat] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const handleMessage = (event) => {
       const message = event.data;
-
-      if (message.type === "response") {
-        if (!message.done) {
-          setCurrentMessage((prev) => prev + message.message);
-        } else {
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            { text: currentMessage + message.message, isUser: false },
-          ]);
-          setCurrentMessage("");
-          setIsLoading(false);
-          setIsNewChat(false);
-        }
-      } else if (message.type === "error") {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { text: message.message, isUser: false, isError: true },
-        ]);
-        setIsLoading(false);
-        setCurrentMessage("");
-      } else if (message.type === "conversationCleared") {
-        setMessages([]);
-        setCurrentMessage("");
-        setIsLoading(false);
-        setIsNewChat(true);
-        vscode.postMessage({ type: "loadHistory" });
-      } else if (message.type === "chatLoaded") {
-        setMessages(
-          message.messages.map((msg) => ({
-            text: msg.content,
-            isUser: msg.role === "user",
-          }))
-        );
-        setIsNewChat(false);
-        setShowHistory(false);
-      } else if (message.type === "historyLoaded") {
-        setHistory(message.history);
-      } else if (message.type === "showFullHistory") {
-        setShowHistory(true);
+      switch (message.type) {
+        case "response":
+          handleResponseMessage(message);
+          break;
+        case "error":
+          handleErrorMessage(message);
+          break;
+        case "conversationCleared":
+          handleConversationCleared();
+          break;
+        case "chatLoaded":
+          handleChatLoaded(message);
+          break;
+        case "historyLoaded":
+          setHistory(message.history);
+          break;
+        case "showFullHistory":
+          setShowHistory(true);
+          break;
       }
     };
 
@@ -76,23 +55,56 @@ function Chat() {
     return () => window.removeEventListener("message", handleMessage);
   }, [currentMessage]);
 
-  useEffect(() => {
-    vscode.postMessage({ type: "loadHistory" });
-  }, []);
-
-  const sendMessage = () => {
-    if (input.trim() !== "" && !isLoading) {
+  const handleResponseMessage = (message) => {
+    if (!message.done) {
+      setCurrentMessage((prev) => prev + message.message);
+    } else {
       setMessages((prevMessages) => [
         ...prevMessages,
-        { text: input, isUser: true },
+        { text: currentMessage + message.message, isUser: false },
       ]);
-      setInput("");
-      setIsLoading(true);
       setCurrentMessage("");
+      setIsLoading(false);
       setIsNewChat(false);
-
-      vscode.postMessage({ type: "sendMessage", message: input });
     }
+  };
+
+  const handleErrorMessage = (message) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: message.message, isUser: false, isError: true },
+    ]);
+    setIsLoading(false);
+    setCurrentMessage("");
+  };
+
+  const handleConversationCleared = () => {
+    setMessages([]);
+    setCurrentMessage("");
+    setIsLoading(false);
+    setIsNewChat(true);
+    vscode.postMessage({ type: "loadHistory" });
+  };
+
+  const handleChatLoaded = (message) => {
+    setMessages(
+      message.messages.map((msg) => ({
+        text: msg.content,
+        isUser: msg.role === "user",
+      }))
+    );
+    setIsNewChat(false);
+    setShowHistory(false);
+  };
+
+  const handleSendMessage = (message) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: message, isUser: true },
+    ]);
+    setIsLoading(true);
+    setIsNewChat(false);
+    vscode.postMessage({ type: "sendMessage", message });
   };
 
   return (
@@ -100,7 +112,12 @@ function Chat() {
       <Header vscode={vscode} />
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {isNewChat && !showHistory ? (
-          <RecentChats history={history} vscode={vscode} />
+          <RecentChats
+            history={history}
+            onChatSelect={(chatId) => {
+              vscode.postMessage({ type: "loadChat", chatId });
+            }}
+          />
         ) : (
           <ChatMessages
             messages={messages}
@@ -110,18 +127,15 @@ function Chat() {
         )}
         {showHistory && (
           <ChatHistory
-            vscode={vscode}
             history={history}
+            onChatSelect={(chatId) => {
+              vscode.postMessage({ type: "loadChat", chatId });
+            }}
             setShowHistory={setShowHistory}
           />
         )}
       </div>
-      <ChatInput
-        input={input}
-        setInput={setInput}
-        sendMessage={sendMessage}
-        isLoading={isLoading}
-      />
+      <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
     </div>
   );
 }

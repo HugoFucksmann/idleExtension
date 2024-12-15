@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 const styles = {
   container: {
@@ -51,16 +51,9 @@ const styles = {
   },
 };
 
-function ChatHistory({ vscode, onClose, history, setShowHistory }) {
+function ChatHistory({ history, onChatSelect, setShowHistory }) {
   const handleClose = () => {
     setShowHistory(false);
-    if (onClose) onClose();
-  };
-
-  const handleChatSelect = (chatId) => {
-    vscode.postMessage({ type: "loadChat", chatId });
-    setShowHistory(false);
-    if (onClose) onClose();
   };
 
   const formatDate = (timestamp) => {
@@ -80,7 +73,7 @@ function ChatHistory({ vscode, onClose, history, setShowHistory }) {
           <div
             key={chat.id}
             style={styles.chatItem}
-            onClick={() => handleChatSelect(chat.id)}
+            onClick={() => onChatSelect(chat.id)}
           >
             <div>{chat.summary}</div>
             <div style={styles.timestamp}>{formatDate(chat.timestamp)}</div>

@@ -69,8 +69,8 @@ export class ChatHistoryStorage {
   private generateSummary(messages: Message[]): string {
     const firstUserMessage = messages.find((msg) => msg.role === "user");
     return firstUserMessage
-      ? `${firstUserMessage.content.slice(0, 50)}${
-          firstUserMessage.content.length > 50 ? "..." : ""
+      ? `${firstUserMessage.content.slice(0, 30)}${
+          firstUserMessage.content.length > 30 ? "..." : ""
         }`
       : "Nueva conversación";
   }

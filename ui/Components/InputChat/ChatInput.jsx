@@ -1,10 +1,11 @@
-import React, { useState, memo } from "react";
+import React, { useState } from "react";
 import ModeSwitch from "./ModeSwitch";
 import FileDropdown from "./FileDropDown";
 import { EnterIcon, ImageIcon, FileIcon } from "./Icons";
 import { styles } from "./ChatInputStyles";
 
-const ChatInput = memo(({ input, setInput, sendMessage, isLoading }) => {
+const ChatInput = ({ onSendMessage, isLoading }) => {
+  const [input, setInput] = useState("");
   const [mode, setMode] = useState("write");
   const [isFileDropdownOpen, setIsFileDropdownOpen] = useState(false);
 
@@ -17,6 +18,13 @@ const ChatInput = memo(({ input, setInput, sendMessage, isLoading }) => {
     "index.html",
     "README.md",
   ];
+
+  const sendMessage = () => {
+    if (input.trim() !== "" && !isLoading) {
+      onSendMessage(input);
+      setInput("");
+    }
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -81,6 +89,6 @@ const ChatInput = memo(({ input, setInput, sendMessage, isLoading }) => {
       </div>
     </div>
   );
-});
+};
 
 export default ChatInput;

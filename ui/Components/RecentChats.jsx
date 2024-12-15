@@ -55,12 +55,8 @@ const styles = {
   },
 };
 
-function RecentChats({ history, vscode }) {
+function RecentChats({ history, onChatSelect }) {
   const recentChats = history.slice(-4).reverse();
-
-  const handleChatSelect = (chatId) => {
-    vscode.postMessage({ type: "loadChat", chatId });
-  };
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
@@ -74,7 +70,7 @@ function RecentChats({ history, vscode }) {
           <div
             key={chat.id}
             style={styles.chatItem}
-            onClick={() => handleChatSelect(chat.id)}
+            onClick={() => onChatSelect(chat.id)}
           >
             <div style={styles.summary}>{chat.summary}</div>
             <div style={styles.timestamp}>{formatDate(chat.timestamp)}</div>
