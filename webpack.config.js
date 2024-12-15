@@ -4,13 +4,12 @@ module.exports = {
   target: "node",
   entry: {
     extension: "./extension.ts",
-    webview: "./webview.jsx",
+    webview: "./ui/webview.jsx",
   },
   output: {
     path: path.resolve(__dirname, "out"),
     filename: "[name].js",
     libraryTarget: "commonjs2",
-    devtoolModuleFilenameTemplate: "../[resource-path]",
   },
   devtool: "source-map",
   externals: {

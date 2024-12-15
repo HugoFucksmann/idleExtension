@@ -3,21 +3,20 @@ import { OllamaService } from "../services/OllamaService";
 import { getHtmlForWebview } from "../utils/webviewUtils";
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
-  static readonly viewType = "aiChatSidebar";
+  public static readonly viewType = "aiChat.chatView";
   private _view?: vscode.WebviewView;
   private _ollamaService: OllamaService;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
-    private readonly _context: vscode.ExtensionContext
+    context: vscode.ExtensionContext
   ) {
-    this._ollamaService = new OllamaService(this._context);
+    this._ollamaService = new OllamaService(context);
   }
 
   resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _context: vscode.WebviewViewResolveContext
   ) {
     this._view = webviewView;
 
@@ -34,8 +33,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (data) => {
       this.handleMessage(data);
     });
-
-    console.log("AI Chat webview has been resolved!");
   }
 
   private handleMessage(message: any) {

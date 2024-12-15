@@ -5,9 +5,6 @@ export function activate(context: vscode.ExtensionContext) {
   const provider = new AIChatViewProvider(context.extensionUri, context);
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      AIChatViewProvider.viewType,
-      provider
-    )
+    vscode.window.registerWebviewViewProvider("aiChat.chatView", provider)
   );
 }

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { styles } from './FileDropDownStyles';
+import React, { memo } from "react";
+import { styles } from "./FileDropDownStyles";
 
-function FileDropdown({ isOpen, onFileSelect, files }) {
+const FileDropdown = memo(({ isOpen, onFileSelect, files }) => {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   if (!isOpen) return null;
@@ -26,6 +26,6 @@ function FileDropdown({ isOpen, onFileSelect, files }) {
       </ul>
     </div>
   );
-}
+});
 
 export default FileDropdown;

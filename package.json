@@ -9,9 +9,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onView:aiChatSidebar"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -27,7 +24,7 @@
       "ai-chat-sidebar": [
         {
           "type": "webview",
-          "id": "aiChatSidebar",
+          "id": "aiChat.chatView",
           "name": "AI Chat"
         }
       ]
