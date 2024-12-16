@@ -40,6 +40,21 @@ const styles = {
     padding: "8px",
     margin: "8px 0",
   },
+  attachedFiles: {
+    display: "flex",
+    gap: "4px",
+    flexWrap: "wrap",
+    marginBottom: "8px",
+  },
+  fileTag: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "var(--vscode-button-secondaryBackground)",
+    color: "var(--vscode-button-secondaryForeground)",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+  },
 };
 
 function parseMessage(message) {
@@ -89,6 +104,10 @@ function MessagePart({ part }) {
   return <p>{part.content}</p>;
 }
 
+function getFileName(filePath) {
+  return filePath.split("/").pop().split("\\").pop();
+}
+
 function ChatMessages({ messages, isLoading, currentMessage }) {
   const chatContainerRef = useRef(null);
 
@@ -110,6 +129,15 @@ function ChatMessages({ messages, isLoading, currentMessage }) {
             ...(msg.isError ? styles.error : {}),
           }}
         >
+          {msg.isUser && msg.attachedFiles && msg.attachedFiles.length > 0 && (
+            <div style={styles.attachedFiles}>
+              {msg.attachedFiles.map((file, i) => (
+                <span key={i} style={styles.fileTag}>
+                  {getFileName(file)}
+                </span>
+              ))}
+            </div>
+          )}
           {msg.isUser
             ? msg.text
             : parseMessage(msg.text).map((part, i) => (

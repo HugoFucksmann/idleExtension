@@ -109,7 +109,11 @@ function Chat() {
   const handleSendMessage = (input, selectedFiles) => {
     setMessages((prevMessages) => [
       ...prevMessages,
-      { text: input, isUser: true },
+      {
+        text: input,
+        isUser: true,
+        attachedFiles: selectedFiles,
+      },
     ]);
     setIsLoading(true);
     setIsNewChat(false);
