@@ -1,4 +1,5 @@
 import React from "react";
+import { HistoryIcon, NewChatIcon, CloseIcon } from "./InputChat/Icons";
 
 const styles = {
   header: {
@@ -15,19 +16,18 @@ const styles = {
     gap: "8px",
   },
   button: {
-    backgroundColor: "var(--vscode-button-background)",
+    backgroundColor: "var(--vscode-button-secondaryBackground)",
     color: "var(--vscode-button-foreground)",
     border: "none",
-    padding: "4px 8px",
+    padding: "6px",
     borderRadius: "3px",
     cursor: "pointer",
-    fontSize: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeButton: {
     backgroundColor: "var(--vscode-errorForeground)",
-  },
-  historyButton: {
-    backgroundColor: "var(--vscode-button-secondaryBackground)",
   },
 };
 
@@ -49,19 +49,25 @@ function Header({ vscode }) {
       <span>AI Chat (qwen2.5-coder:7b)</span>
       <div style={styles.buttonsContainer}>
         <button
-          style={{ ...styles.button, ...styles.historyButton }}
+          style={{ ...styles.button }}
           onClick={handleHistory}
+          title="Historial"
         >
-          Historial
+          <HistoryIcon />
         </button>
-        <button style={styles.button} onClick={handleNewChat}>
-          Nuevo Chat
+        <button
+          style={styles.button}
+          onClick={handleNewChat}
+          title="Nuevo Chat"
+        >
+          <NewChatIcon />
         </button>
         <button
           style={{ ...styles.button, ...styles.closeButton }}
           onClick={handleClose}
+          title="Cerrar"
         >
-          Cerrar
+          <CloseIcon />
         </button>
       </div>
     </div>

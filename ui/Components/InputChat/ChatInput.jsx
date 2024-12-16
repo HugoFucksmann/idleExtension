@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 import ModeSwitch from "./ModeSwitch";
 import { EnterIcon } from "./Icons";
 import { styles } from "./ChatInputStyles";
 import SelectedFiles from "./SelectedFiles";
 
-const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
+const ChatInput = ({
+  onSendMessage,
+  isLoading,
+  projectFiles,
+  mode,
+  onModeChange,
+}) => {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState("write");
-  const [projectFiles, setProjectFiles] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
 
   const handleTextareaChange = (e) => {
@@ -23,32 +27,9 @@ const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
     textarea.style.overflowY = textarea.scrollHeight > 150 ? "auto" : "hidden";
   };
 
-  useEffect(() => {
-    const handleProjectFiles = (event) => {
-      const message = event.data;
-      if (message.type === "projectFiles") {
-        setProjectFiles(message.files);
-      }
-    };
-
-    if (vscode) {
-      vscode.postMessage({ type: "getProjectFiles" });
-      window.addEventListener("message", handleProjectFiles);
-    }
-
-    return () => {
-      window.removeEventListener("message", handleProjectFiles);
-    };
-  }, []);
-
-  const sendMessage = () => {
+  const handleSendClick = () => {
     if ((input.trim() !== "" || selectedFiles.length > 0) && !isLoading) {
-      const messageWithFiles =
-        selectedFiles.length > 0
-          ? `${input}\n\nArchivos seleccionados:\n${selectedFiles.join("\n")}`
-          : input;
-
-      onSendMessage(messageWithFiles);
+      onSendMessage(input, selectedFiles);
       setInput("");
       setSelectedFiles([]);
 
@@ -62,7 +43,7 @@ const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendClick();
     }
   };
 
@@ -74,12 +55,6 @@ const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
 
   const handleRemoveFile = (file) => {
     setSelectedFiles((prev) => prev.filter((f) => f !== file));
-  };
-
-  const handleSendClick = () => {
-    if (!isLoading) {
-      sendMessage();
-    }
   };
 
   return (
@@ -117,12 +92,12 @@ const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
           }}
           title="Send message (Enter)"
         >
-          <EnterIcon style={styles.sendIcon} />
+          <EnterIcon />
         </button>
       </div>
 
       <div style={styles.actionsRow}>
-        <ModeSwitch mode={mode} onModeChange={setMode} />
+        <ModeSwitch mode={mode} onModeChange={onModeChange} />
       </div>
     </div>
   );

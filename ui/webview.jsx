@@ -25,6 +25,8 @@ function Chat() {
   const [history, setHistory] = useState([]);
   const [isNewChat, setIsNewChat] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [inputMode, setInputMode] = useState("write");
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -48,22 +50,29 @@ function Chat() {
         case "showFullHistory":
           setShowHistory(true);
           break;
+        case "projectFiles":
+          setProjectFiles(message.files);
+          break;
       }
     };
 
     window.addEventListener("message", handleMessage);
+    vscode.postMessage({ type: "getProjectFiles" });
     return () => window.removeEventListener("message", handleMessage);
-  }, [currentMessage]);
+  }, []);
 
   const handleResponseMessage = (message) => {
     if (!message.done) {
       setCurrentMessage((prev) => prev + message.message);
     } else {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { text: currentMessage + message.message, isUser: false },
-      ]);
-      setCurrentMessage("");
+      setCurrentMessage((prev) => {
+        const finalMessage = prev + message.message;
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { text: finalMessage, isUser: false },
+        ]);
+        return "";
+      });
       setIsLoading(false);
       setIsNewChat(false);
     }
@@ -97,14 +106,23 @@ function Chat() {
     setShowHistory(false);
   };
 
-  const handleSendMessage = (message) => {
+  const handleSendMessage = (input, selectedFiles) => {
+    const messageWithFiles =
+      selectedFiles.length > 0
+        ? `${input}\n\nArchivos seleccionados:\n${selectedFiles.join("\n")}`
+        : input;
+
     setMessages((prevMessages) => [
       ...prevMessages,
-      { text: message, isUser: true },
+      { text: messageWithFiles, isUser: true },
     ]);
     setIsLoading(true);
     setIsNewChat(false);
-    vscode.postMessage({ type: "sendMessage", message });
+    vscode.postMessage({ type: "sendMessage", message: messageWithFiles });
+  };
+
+  const handleModeChange = (mode) => {
+    setInputMode(mode);
   };
 
   return (
@@ -138,7 +156,9 @@ function Chat() {
       <ChatInput
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
-        vscode={vscode}
+        projectFiles={projectFiles}
+        mode={inputMode}
+        onModeChange={handleModeChange}
       />
     </div>
   );
