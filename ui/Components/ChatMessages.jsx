@@ -8,6 +8,8 @@ const styles = {
     flex: 1,
     overflowY: "auto",
     padding: "10px",
+    height: "100%", // Asegurar que tome toda la altura disponible
+    maxHeight: "100%", // Limitar la altura máxima
   },
   message: {
     marginBottom: "10px",

@@ -21,10 +21,20 @@ export class OllamaService {
 
   async sendToOllama(
     userMessage: string,
+    selectedFiles: string[] = [],
     view: vscode.WebviewView | undefined
   ): Promise<void> {
     try {
-      this._chatManager.addMessage({ role: "user", content: userMessage });
+      const messageWithContext =
+        await this._fileSystemAgent.prepareMessageWithContext(
+          userMessage,
+          selectedFiles
+        );
+
+      this._chatManager.addMessage({
+        role: "user",
+        content: messageWithContext,
+      });
 
       const response = await this._api.generateResponse(
         this._chatManager.formatConversation(),

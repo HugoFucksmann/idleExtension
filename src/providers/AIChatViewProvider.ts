@@ -38,7 +38,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
   private handleMessage(message: any) {
     switch (message.type) {
       case "sendMessage":
-        this._ollamaService.sendToOllama(message.message, this._view);
+        this._ollamaService.sendToOllama(
+          message.message,
+          message.selectedFiles || [],
+          this._view
+        );
         break;
       case "clearConversation":
         this._ollamaService.clearConversation();

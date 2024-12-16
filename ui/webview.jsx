@@ -107,18 +107,17 @@ function Chat() {
   };
 
   const handleSendMessage = (input, selectedFiles) => {
-    const messageWithFiles =
-      selectedFiles.length > 0
-        ? `${input}\n\nArchivos seleccionados:\n${selectedFiles.join("\n")}`
-        : input;
-
     setMessages((prevMessages) => [
       ...prevMessages,
-      { text: messageWithFiles, isUser: true },
+      { text: input, isUser: true },
     ]);
     setIsLoading(true);
     setIsNewChat(false);
-    vscode.postMessage({ type: "sendMessage", message: messageWithFiles });
+    vscode.postMessage({
+      type: "sendMessage",
+      message: input,
+      selectedFiles: selectedFiles,
+    });
   };
 
   const handleModeChange = (mode) => {
