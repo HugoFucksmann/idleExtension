@@ -2,23 +2,65 @@ export const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
-    padding: "16px",
+    gap: "8px",
+    padding: "8px",
     borderTop: "1px solid #e5e7eb",
   },
   inputWrapper: {
     position: "relative",
     flex: 1,
   },
-  input: {
-    width: "90%",
-    padding: "8px 40px 8px 16px",
+  textareaContainer: {
+    position: "relative",
+    display: "flex",
+    width: "100%",
+  },
+  textarea: {
+    width: "100%",
+    resize: "none",
+    minHeight: "36px",
+    maxHeight: "150px",
+    padding: "8px 40px 8px 16px", // Espacio para el botón
     borderRadius: "8px",
-    border: "1px solid #e5e7eb",
-    backgroundColor: "#f2f2f2",
-    color: "#111827",
-    fontSize: "14px",
+    border: "1px solid var(--vscode-input-border)",
+    backgroundColor: "var(--vscode-input-background)",
+    color: "var(--vscode-input-foreground)",
+    fontSize: "12px",
     outline: "none",
+    overflowY: "auto",
+    lineHeight: "1.5",
+    scrollbarWidth: "thin",
+    scrollbarColor: "var(--vscode-scrollbarSlider-background) transparent",
+  },
+  sendButton: {
+    position: "absolute",
+    right: "8px",
+    bottom: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "4px",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    borderRadius: "4px",
+    color: "var(--vscode-button-foreground)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "var(--vscode-button-hoverBackground)",
+    },
+  },
+  sendIcon: {
+    width: "16px",
+    height: "16px",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+    pointerEvents: "none",
+  },
+  buttonInactive: {
+    opacity: 0.3,
   },
   inputDisabled: {
     opacity: 0.5,
@@ -33,7 +75,7 @@ export const styles = {
   },
   actionsRow: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
   },
   uploadButtons: {

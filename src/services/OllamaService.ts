@@ -4,16 +4,19 @@ import { ChatHistory, Message } from "../types/chatTypes";
 import { ChatHistoryStorage } from "./ChatHistoryStorage";
 import { ChatManager } from "./ChatManager";
 import { OllamaAPI } from "./OllamaAPI";
+import { FileSystemAgent } from "../agents/FileSystemAgent";
 
 export class OllamaService {
   private _storage: ChatHistoryStorage;
   private _chatManager: ChatManager;
   private _api: OllamaAPI;
+  private _fileSystemAgent: FileSystemAgent;
 
   constructor(context: vscode.ExtensionContext) {
     this._storage = new ChatHistoryStorage(context);
     this._chatManager = new ChatManager();
     this._api = new OllamaAPI();
+    this._fileSystemAgent = new FileSystemAgent();
   }
 
   async sendToOllama(
@@ -74,5 +77,9 @@ export class OllamaService {
 
   getCurrentMessages(): Message[] {
     return this._chatManager.getCurrentMessages();
+  }
+
+  async getProjectFiles(): Promise<string[]> {
+    return await this._fileSystemAgent.getProjectFiles();
   }
 }

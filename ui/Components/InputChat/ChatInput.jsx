@@ -1,28 +1,61 @@
-import React, { useState } from "react";
-import ModeSwitch from "./ModeSwitch";
-import FileDropdown from "./FileDropDown";
-import { EnterIcon, ImageIcon, FileIcon } from "./Icons";
-import { styles } from "./ChatInputStyles";
+import React, { useState, useEffect } from "react";
 
-const ChatInput = ({ onSendMessage, isLoading }) => {
+import ModeSwitch from "./ModeSwitch";
+import { EnterIcon } from "./Icons";
+import { styles } from "./ChatInputStyles";
+import SelectedFiles from "./SelectedFiles";
+
+const ChatInput = ({ onSendMessage, isLoading, vscode }) => {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState("write");
-  const [isFileDropdownOpen, setIsFileDropdownOpen] = useState(false);
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
-  // Mock file list - replace with actual project files
-  const projectFiles = [
-    "src/App.jsx",
-    "src/main.jsx",
-    "src/styles.css",
-    "package.json",
-    "index.html",
-    "README.md",
-  ];
+  const handleTextareaChange = (e) => {
+    const textarea = e.target;
+    setInput(textarea.value);
+
+    textarea.style.height = "auto";
+
+    const newHeight = Math.min(textarea.scrollHeight, 150);
+    textarea.style.height = `${newHeight}px`;
+
+    textarea.style.overflowY = textarea.scrollHeight > 150 ? "auto" : "hidden";
+  };
+
+  useEffect(() => {
+    const handleProjectFiles = (event) => {
+      const message = event.data;
+      if (message.type === "projectFiles") {
+        setProjectFiles(message.files);
+      }
+    };
+
+    if (vscode) {
+      vscode.postMessage({ type: "getProjectFiles" });
+      window.addEventListener("message", handleProjectFiles);
+    }
+
+    return () => {
+      window.removeEventListener("message", handleProjectFiles);
+    };
+  }, []);
 
   const sendMessage = () => {
-    if (input.trim() !== "" && !isLoading) {
-      onSendMessage(input);
+    if ((input.trim() !== "" || selectedFiles.length > 0) && !isLoading) {
+      const messageWithFiles =
+        selectedFiles.length > 0
+          ? `${input}\n\nArchivos seleccionados:\n${selectedFiles.join("\n")}`
+          : input;
+
+      onSendMessage(messageWithFiles);
       setInput("");
+      setSelectedFiles([]);
+
+      const textarea = document.querySelector("textarea");
+      if (textarea) {
+        textarea.style.height = "auto";
+      }
     }
   };
 
@@ -33,58 +66,62 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
-  const handleImageUpload = () => {
-    console.log("Image upload clicked");
+  const handleFileSelect = (file) => {
+    if (!selectedFiles.includes(file)) {
+      setSelectedFiles((prev) => [...prev, file]);
+    }
   };
 
-  const handleFileSelect = (file) => {
-    console.log("Selected file:", file);
-    setIsFileDropdownOpen(false);
+  const handleRemoveFile = (file) => {
+    setSelectedFiles((prev) => prev.filter((f) => f !== file));
+  };
+
+  const handleSendClick = () => {
+    if (!isLoading) {
+      sendMessage();
+    }
   };
 
   return (
     <div style={styles.container}>
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={
-          mode === "write" ? "Write something..." : "Ask something..."
-        }
-        disabled={isLoading}
-        style={{
-          ...styles.input,
-          ...(isLoading && styles.inputDisabled),
-        }}
+      <SelectedFiles
+        files={selectedFiles}
+        onRemove={handleRemoveFile}
+        projectFiles={projectFiles}
+        onFileSelect={handleFileSelect}
       />
-      <div style={styles.enterIcon}>
-        <EnterIcon />
+      <div style={styles.textareaContainer}>
+        <textarea
+          value={input}
+          onChange={handleTextareaChange}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            mode === "write" ? "Write something..." : "Ask something..."
+          }
+          disabled={isLoading}
+          rows={1}
+          style={{
+            ...styles.textarea,
+            ...(isLoading && styles.inputDisabled),
+          }}
+        />
+        <button
+          onClick={handleSendClick}
+          disabled={isLoading}
+          style={{
+            ...styles.sendButton,
+            ...(isLoading && styles.buttonDisabled),
+            ...(input.trim() === "" &&
+              selectedFiles.length === 0 &&
+              styles.buttonInactive),
+          }}
+          title="Send message (Enter)"
+        >
+          <EnterIcon style={styles.sendIcon} />
+        </button>
       </div>
 
       <div style={styles.actionsRow}>
-        <div style={styles.uploadButtons}>
-          <button
-            onClick={handleImageUpload}
-            style={styles.iconButton}
-            title="Upload image"
-          >
-            <ImageIcon />
-          </button>
-          <button
-            onClick={() => setIsFileDropdownOpen(!isFileDropdownOpen)}
-            style={styles.iconButton}
-            title="Select file"
-          >
-            <FileIcon />
-          </button>
-          <FileDropdown
-            isOpen={isFileDropdownOpen}
-            onFileSelect={handleFileSelect}
-            files={projectFiles}
-          />
-        </div>
-
         <ModeSwitch mode={mode} onModeChange={setMode} />
       </div>
     </div>

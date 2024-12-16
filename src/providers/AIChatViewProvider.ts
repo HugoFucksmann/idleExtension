@@ -57,6 +57,14 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         this.loadHistory();
         this._view?.webview.postMessage({ type: "showFullHistory" });
         break;
+      case "getProjectFiles":
+        this._ollamaService.getProjectFiles().then((files) => {
+          this._view?.webview.postMessage({
+            type: "projectFiles",
+            files,
+          });
+        });
+        break;
     }
   }
 

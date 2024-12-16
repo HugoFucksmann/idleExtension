@@ -135,7 +135,11 @@ function Chat() {
           />
         )}
       </div>
-      <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        vscode={vscode}
+      />
     </div>
   );
 }

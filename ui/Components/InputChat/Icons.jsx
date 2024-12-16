@@ -1,6 +1,6 @@
 import React from "react";
 
-export const EnterIcon = ({ stroke = "grey", width = 18, height = 18 }) => (
+export const EnterIcon = ({ stroke = "#f2f2f2", width = 14, height = 14 }) => (
   <svg
     width={width}
     height={height}
@@ -11,9 +11,9 @@ export const EnterIcon = ({ stroke = "grey", width = 18, height = 18 }) => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M7 13L17 13" />
-    <path d="M17 13L13 17" />
-    <path d="M17 13L13 9" />
+    <path d="M3 12L7 8" />
+    <path d="M3 12L7 16" />
+    <path d="M3 12H16C18 12 20 10 20 8V4" />
   </svg>
 );
 
@@ -40,8 +40,8 @@ export const ImageIcon = ({
 
 export const FileIcon = ({
   stroke = "currentColor",
-  width = 20,
-  height = 20,
+  width = 12,
+  height = 12,
 }) => (
   <svg
     width={width}
@@ -60,8 +60,8 @@ export const FileIcon = ({
 
 export const WriteIcon = ({
   stroke = "currentColor",
-  width = 16,
-  height = 16,
+  width = 12,
+  height = 12,
 }) => (
   <svg
     width={width}
@@ -80,8 +80,8 @@ export const WriteIcon = ({
 
 export const ChatIcon = ({
   stroke = "currentColor",
-  width = 16,
-  height = 16,
+  width = 12,
+  height = 12,
 }) => (
   <svg
     width={width}
