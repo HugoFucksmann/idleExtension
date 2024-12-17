@@ -92,4 +92,33 @@ export class OllamaService {
   async getProjectFiles(): Promise<string[]> {
     return await this._fileSystemAgent.getProjectFiles();
   }
+
+  async editAndResendMessage(
+    messageIndex: number,
+    userMessage: string,
+    selectedFiles: string[],
+    view: vscode.WebviewView | undefined
+  ): Promise<void> {
+    try {
+      // Truncar la conversación hasta el mensaje editado
+      this._chatManager.truncateConversationAtIndex(messageIndex);
+
+      // Enviar el mensaje editado
+      await this.sendToOllama(userMessage, selectedFiles, view);
+
+      // Guardar la conversación actualizada
+      await this._storage.saveChat(
+        this._chatManager.getCurrentChatId(),
+        this._chatManager.getCurrentMessages()
+      );
+    } catch (error) {
+      console.error("Error editing message:", error);
+      if (view) {
+        view.webview.postMessage({
+          type: "error",
+          message: "Error al editar el mensaje",
+        });
+      }
+    }
+  }
 }

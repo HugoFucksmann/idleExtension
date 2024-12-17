@@ -129,6 +129,19 @@ function Chat() {
     setInputMode(mode);
   };
 
+  const handleEditMessage = (messageIndex, text, attachedFiles) => {
+    const truncatedMessages = messages.slice(0, messageIndex);
+
+    setMessages([...truncatedMessages, { text, isUser: true, attachedFiles }]);
+
+    vscode.postMessage({
+      type: "editMessage",
+      messageIndex,
+      message: text,
+      selectedFiles: attachedFiles || [],
+    });
+  };
+
   return (
     <div style={styles.container}>
       <Header vscode={vscode} />
@@ -145,6 +158,7 @@ function Chat() {
             messages={messages}
             isLoading={isLoading}
             currentMessage={currentMessage}
+            onEditMessage={handleEditMessage}
           />
         )}
         {showHistory && (

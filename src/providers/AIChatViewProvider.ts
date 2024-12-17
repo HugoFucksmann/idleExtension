@@ -44,6 +44,14 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
           this._view
         );
         break;
+      case "editMessage":
+        this._ollamaService.editAndResendMessage(
+          message.messageIndex,
+          message.message,
+          message.selectedFiles || [],
+          this._view
+        );
+        break;
       case "clearConversation":
         this._ollamaService.clearConversation();
         this._view?.webview.postMessage({ type: "conversationCleared" });

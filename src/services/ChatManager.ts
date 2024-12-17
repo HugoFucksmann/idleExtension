@@ -38,4 +38,13 @@ export class ChatManager {
       .map((msg) => `${msg.role}: ${msg.content}`)
       .join("\n\n");
   }
+
+  truncateConversationAtIndex(index: number): void {
+    this._conversationHistory = this._conversationHistory.slice(0, index);
+  }
+
+  editMessage(index: number, newMessage: Message): void {
+    this.truncateConversationAtIndex(index);
+    this.addMessage(newMessage);
+  }
 }

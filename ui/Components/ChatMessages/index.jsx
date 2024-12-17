@@ -3,7 +3,12 @@ import React, { useRef, useEffect } from "react";
 import { Message } from "./Message";
 import { styles } from "./styles";
 
-const ChatMessages = ({ messages, isLoading, currentMessage }) => {
+const ChatMessages = ({
+  messages,
+  isLoading,
+  currentMessage,
+  onEditMessage,
+}) => {
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -15,11 +20,17 @@ const ChatMessages = ({ messages, isLoading, currentMessage }) => {
       setTimeout(scrollToBottom, 0);
     }
   }, [messages, currentMessage]);
+  console.log(messages);
 
   return (
     <div ref={chatContainerRef} style={styles.chatContainer}>
       {messages.map((msg, index) => (
-        <Message key={index} message={msg} />
+        <Message
+          key={index}
+          message={msg}
+          messageIndex={index}
+          onEdit={onEditMessage}
+        />
       ))}
       {isLoading && (
         <Message
