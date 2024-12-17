@@ -118,4 +118,8 @@ export const styles = {
       border: "1px solid var(--vscode-focusBorder)",
     },
   },
+  buttonGroup: {
+    display: "flex",
+    gap: "4px",
+  },
 };

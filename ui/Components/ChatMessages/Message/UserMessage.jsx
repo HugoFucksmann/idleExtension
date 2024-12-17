@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AttachedFiles } from "../AttachedFiles";
+import AttachedFiles from "../AttachedFiles";
 import { styles } from "../styles";
 
 const IconEdit = () => (

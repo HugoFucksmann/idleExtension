@@ -5,7 +5,7 @@ function getFileName(filePath) {
   return filePath.split("/").pop().split("\\").pop();
 }
 
-export const AttachedFiles = ({ files }) => {
+const AttachedFiles = ({ files }) => {
   if (!files?.length) return null;
 
   return (
@@ -18,3 +18,5 @@ export const AttachedFiles = ({ files }) => {
     </div>
   );
 };
+
+export default AttachedFiles;

@@ -1,11 +1,141 @@
-import React from "react";
-import { CodeBlockHeader } from "./Header";
-import { CodeBlockContent } from "./Content";
+import React, { useState, useEffect } from "react";
+import Prism from "prismjs";
 import { styles } from "../../styles";
+import { useAppContext } from "../../../../context/AppContext";
 
-export const CodeBlock = ({ content, language, filename }) => {
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
+const IconTick = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const IconCopy = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+  </svg>
+);
+
+const IconApply = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const CodeBlockHeader = ({ filename, language, onCopy, onApply }) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
+
+  useEffect(() => {
+    if (isCopied) {
+      const timer = setTimeout(() => setIsCopied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCopied]);
+
+  useEffect(() => {
+    if (isApplied) {
+      const timer = setTimeout(() => setIsApplied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isApplied]);
+
+  const handleCopy = async () => {
+    await onCopy();
+    setIsCopied(true);
+  };
+
+  const handleApply = async () => {
+    await onApply();
+    setIsApplied(true);
+  };
+
+  // Ruta por defecto para pruebas
+  const displayFilename = filename || "src/pages/home.jsx";
+
+  return (
+    <div style={styles.codeBlockHeader}>
+      <span>{displayFilename}</span>
+      <div style={styles.buttonGroup}>
+        <button
+          onClick={handleApply}
+          style={{
+            ...styles.copyButton,
+            color: isApplied ? "#4CAF50" : "currentColor",
+          }}
+          title="Aplicar cambios"
+        >
+          <IconApply />
+        </button>
+        <button
+          onClick={handleCopy}
+          style={{
+            ...styles.copyButton,
+            color: isCopied ? "#4CAF50" : "currentColor",
+          }}
+          title="Copiar código"
+        >
+          {isCopied ? <IconTick /> : <IconCopy />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const CodeBlockContent = ({ content, language }) => {
+  useEffect(() => {
+    Prism.highlightAll();
+  }, [content]);
+
+  return (
+    <pre style={styles.codeBlockContent}>
+      <code className={`language-${language || "javascript"}`}>{content}</code>
+    </pre>
+  );
+};
+
+const CodeBlock = ({ content, language, filename }) => {
+  const { vscode } = useAppContext();
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(content);
+  };
+
+  const handleApply = async () => {
+    vscode.postMessage({
+      type: "applyChanges",
+      payload: {
+        filename: filename || "src/pages/home.jsx",
+        content,
+      },
+    });
   };
 
   return (
@@ -14,8 +144,10 @@ export const CodeBlock = ({ content, language, filename }) => {
         filename={filename}
         language={language}
         onCopy={handleCopy}
+        onApply={handleApply}
       />
       <CodeBlockContent content={content} language={language} />
     </div>
   );
 };
+export default CodeBlock;

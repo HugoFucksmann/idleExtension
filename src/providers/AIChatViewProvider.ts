@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { OllamaService } from "../services/OllamaService";
 import { getHtmlForWebview } from "../utils/webviewUtils";
+import { FileEditorAgent } from "../agents/FileEditorAgent";
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "aiChat.chatView";
@@ -76,6 +77,14 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             files,
           });
         });
+        break;
+      case "applyChanges":
+        const fileEditor = new FileEditorAgent();
+        fileEditor.applyChanges(
+          message.payload.filename,
+          message.payload.content,
+          false // Por ahora asumimos que es un reemplazo completo
+        );
         break;
     }
   }

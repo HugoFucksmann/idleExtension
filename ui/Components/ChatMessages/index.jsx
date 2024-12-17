@@ -1,4 +1,3 @@
-// ui/Components/ChatMessages/index.jsx
 import React, { useRef, useEffect } from "react";
 import { Message } from "./Message";
 import { styles } from "./styles";
@@ -20,7 +19,6 @@ const ChatMessages = ({
       setTimeout(scrollToBottom, 0);
     }
   }, [messages, currentMessage]);
-  console.log(messages);
 
   return (
     <div ref={chatContainerRef} style={styles.chatContainer}>

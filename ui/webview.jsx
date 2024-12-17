@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import Header from "./Components/Header";
-
 import ChatInput from "./Components/InputChat/ChatInput";
 import ChatHistory from "./Components/ChatHistory";
 import RecentChats from "./Components/RecentChats";
 import ChatMessages from "./Components/ChatMessages/index";
-
-const vscode = acquireVsCodeApi();
+import { AppProvider, useAppContext } from "./context/AppContext";
 
 const styles = {
   container: {
@@ -20,6 +18,7 @@ const styles = {
 };
 
 function Chat() {
+  const { vscode } = useAppContext();
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [showHistory, setShowHistory] = useState(false);
@@ -141,10 +140,11 @@ function Chat() {
       selectedFiles: attachedFiles || [],
     });
   };
+  console.log("messages", messages);
 
   return (
     <div style={styles.container}>
-      <Header vscode={vscode} />
+      <Header />
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {isNewChat && !showHistory ? (
           <RecentChats
@@ -182,4 +182,9 @@ function Chat() {
   );
 }
 
-ReactDOM.render(<Chat />, document.getElementById("root"));
+ReactDOM.render(
+  <AppProvider>
+    <Chat />
+  </AppProvider>,
+  document.getElementById("root")
+);
