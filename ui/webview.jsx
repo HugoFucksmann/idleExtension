@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import Header from "./Components/Header";
-import ChatMessages from "./Components/ChatMessages";
+
 import ChatInput from "./Components/InputChat/ChatInput";
 import ChatHistory from "./Components/ChatHistory";
 import RecentChats from "./Components/RecentChats";
+import ChatMessages from "./Components/ChatMessages/index";
 
 const vscode = acquireVsCodeApi();
 
