@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo, useState, useEffect, useRef } from "react";
 import { EnterIcon, WriteIcon, ChatIcon, FileIcon } from "./Icons";
 import { styles } from "./ChatInputStyles";
 import { useAppContext } from "../../context/AppContext";
@@ -7,6 +7,7 @@ import { useTextareaResize } from "../../hooks/useTextareaResize";
 const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef(null);
   
   console.log("[FileSelector] Props received:", {
     filesCount: files.length,
@@ -14,10 +15,28 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
     isDropdownOpen
   });
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   const handleFileSelect = (file) => {
     console.log("[FileSelector] File selected:", file);
     onFileSelect(file);
-    setIsDropdownOpen(false);
+    // No cerramos el dropdown para permitir selecciones múltiples
+    // Solo limpiamos el término de búsqueda para una mejor experiencia
     setSearchTerm("");
   };
 
@@ -34,7 +53,7 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   );
 
   return (
-    <div style={styles.filesWrapper}>
+    <div style={styles.filesWrapper} ref={dropdownRef}>
       <div style={styles.filesContainer}>
         <button
           onClick={toggleDropdown}
