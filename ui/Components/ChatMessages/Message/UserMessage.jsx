@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 import { styles } from "../styles";
 import AttachedFiles from "../AttachedFiles";
@@ -22,7 +22,8 @@ const IconEdit = () => (
 export const UserMessage = ({ message, onEdit, messageIndex }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(message.text);
-console.log(message);
+  const textareaRef = useRef(null);
+  console.log(message);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -37,6 +38,14 @@ console.log(message);
       }
     }
   };
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`; // Limita la altura máxima a 200px
+    }
+  }, [editedText]);
 
   return (
     <div style={{ ...styles.message, ...styles.userMessage }}>
@@ -54,21 +63,24 @@ console.log(message);
       </div>
       {isEditing ? (
         <textarea
+          ref={textareaRef}
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           style={{
             ...styles.editInput,
-            minHeight: "60px",
+            minHeight: "20px",
+            maxHeight: "100px",
             width: "100%",
             backgroundColor: "var(--vscode-input-background)",
             color: "var(--vscode-input-foreground)",
             border: "1px solid var(--vscode-input-border)",
             borderRadius: "4px",
             padding: "8px",
-            resize: "vertical",
+            resize: "none",
             fontFamily: "inherit",
             fontSize: "inherit",
+            overflow: "auto",
           }}
           autoFocus
           placeholder="Presiona Enter para enviar"
