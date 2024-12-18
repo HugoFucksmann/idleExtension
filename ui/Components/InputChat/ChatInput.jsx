@@ -4,9 +4,9 @@ import { styles } from "./ChatInputStyles";
 import { useAppContext } from "../../context/AppContext";
 import { useTextareaResize } from "../../hooks/useTextareaResize";
 
-
 const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   console.log("[FileSelector] Props received:", {
     filesCount: files.length,
@@ -18,17 +18,25 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
     console.log("[FileSelector] File selected:", file);
     onFileSelect(file);
     setIsDropdownOpen(false);
+    setSearchTerm("");
   };
 
   const toggleDropdown = () => {
     console.log("[FileSelector] Toggling dropdown, current state:", !isDropdownOpen);
     setIsDropdownOpen(!isDropdownOpen);
+    if (!isDropdownOpen) {
+      setSearchTerm("");
+    }
   };
+
+  const filteredFiles = projectFiles?.filter(file => 
+    file.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div style={styles.filesWrapper}>
       <div style={styles.filesContainer}>
-      <button
+        <button
           onClick={toggleDropdown}
           style={styles.addButton}
           title="Add file"
@@ -50,14 +58,22 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
             </button>
           </div>
         ))}
-       
       </div>
 
       {isDropdownOpen && (
         <div style={styles.dropdown}>
+          <div style={styles.searchContainer}>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search files..."
+              style={styles.searchInput}
+            />
+          </div>
           <ul style={styles.fileList}>
-            {projectFiles?.length > 0 ? (
-              projectFiles.map((file) => (
+            {filteredFiles?.length > 0 ? (
+              filteredFiles.map((file) => (
                 <li
                   key={file}
                   onClick={() => handleFileSelect(file)}
@@ -67,7 +83,9 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
                 </li>
               ))
             ) : (
-              <li style={styles.fileItem}>No files available</li>
+              <li style={styles.fileItem}>
+                {searchTerm ? "No matching files" : "No files available"}
+              </li>
             )}
           </ul>
         </div>
