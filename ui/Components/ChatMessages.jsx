@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+/* import React, { useRef, useEffect } from "react";
 import Prism from "prismjs";
 import "prismjs/themes/prism-tomorrow.css";
 import "prismjs/components/prism-javascript";
@@ -159,3 +159,4 @@ function ChatMessages({ messages, isLoading, currentMessage }) {
 }
 
 export default ChatMessages;
+ */

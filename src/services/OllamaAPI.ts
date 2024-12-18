@@ -1,4 +1,7 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+
 export class OllamaAPI {
   private _controller: AbortController | null = null;
 
@@ -55,12 +58,17 @@ export class OllamaAPI {
 
       return buffer;
     } catch (error: unknown) {
-      if (error instanceof Error && error.name !== "AbortError") {
-        throw error;
+      if (error instanceof Error) {
+        return await this.readDefaultResponse();
       }
       return "";
     } finally {
       this._controller = null;
     }
+  }
+
+  private async readDefaultResponse(): Promise<string> {
+    const filePath = path.join(__dirname, "..", "respuestaEjemplo.txt");
+    return fs.promises.readFile(filePath, "utf8");
   }
 }

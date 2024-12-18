@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import AttachedFiles from "../AttachedFiles";
+
 import { styles } from "../styles";
+import AttachedFiles from "../AttachedFiles";
 
 const IconEdit = () => (
   <svg
@@ -21,6 +22,7 @@ const IconEdit = () => (
 export const UserMessage = ({ message, onEdit, messageIndex }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(message.text);
+console.log(message);
 
   const handleEdit = () => {
     setIsEditing(true);

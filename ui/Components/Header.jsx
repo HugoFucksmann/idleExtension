@@ -1,5 +1,6 @@
 import React from "react";
 import { HistoryIcon, NewChatIcon, CloseIcon } from "./InputChat/Icons";
+import { useAppContext } from "../context/AppContext";
 
 const styles = {
   header: {
@@ -31,7 +32,9 @@ const styles = {
   },
 };
 
-function Header({ vscode }) {
+function Header() {
+  const { vscode } = useAppContext();
+
   const handleNewChat = () => {
     vscode.postMessage({ type: "clearConversation" });
   };
@@ -41,7 +44,7 @@ function Header({ vscode }) {
   };
 
   const handleHistory = () => {
-    vscode.postMessage({ type: "showHistory" });
+    vscode.postMessage({ type: "showFullHistory" });
   };
 
   return (
@@ -49,23 +52,23 @@ function Header({ vscode }) {
       <span>AI Chat (qwen2.5-coder:7b)</span>
       <div style={styles.buttonsContainer}>
         <button
-          style={{ ...styles.button }}
           onClick={handleHistory}
-          title="Historial"
+          style={styles.button}
+          title="Ver historial completo"
         >
           <HistoryIcon />
         </button>
         <button
-          style={styles.button}
           onClick={handleNewChat}
-          title="Nuevo Chat"
+          style={styles.button}
+          title="Nuevo chat"
         >
           <NewChatIcon />
         </button>
         <button
-          style={{ ...styles.button, ...styles.closeButton }}
           onClick={handleClose}
-          title="Cerrar"
+          style={{...styles.button, ...styles.closeButton}}
+          title="Cerrar panel"
         >
           <CloseIcon />
         </button>

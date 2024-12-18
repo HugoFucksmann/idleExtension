@@ -17,25 +17,16 @@ export const styles = {
   },
   userMessage: {
     alignSelf: "flex-end",
-    // backgroundColor: "var(--vscode-button-background)",
     backgroundColor: "var(--vscode-editor-background)",
     color: "var(--vscode-button-foreground)",
     border: "1px solid var(--vscode-input-border)",
   },
   aiMessage: {
     alignSelf: "flex-start",
-    //  backgroundColor: "var(--vscode-editor-background)",
-    // border: "1px solid var(--vscode-input-border)",
-  },
-  error: {
-    color: "var(--vscode-errorForeground)",
-    backgroundColor: "var(--vscode-inputValidation-errorBackground)",
-    border: "1px solid var(--vscode-inputValidation-errorBorder)",
   },
   codeBlock: {
     backgroundColor: "var(--vscode-editor-background)",
     border: "1px solid var(--vscode-input-border)",
-    // border: "1px solid #f2f2f2",
     borderRadius: "4px",
     margin: "8px 0",
     overflow: "hidden",
@@ -51,6 +42,8 @@ export const styles = {
   codeBlockContent: {
     padding: "12px",
     margin: 0,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   },
   attachedFiles: {
     display: "flex",
@@ -103,23 +96,15 @@ export const styles = {
     },
   },
   editInput: {
+    minHeight: "60px",
+    width: "100%",
     backgroundColor: "var(--vscode-input-background)",
     color: "var(--vscode-input-foreground)",
     border: "1px solid var(--vscode-input-border)",
     borderRadius: "4px",
     padding: "8px",
-    marginTop: "4px",
-    width: "100%",
     resize: "vertical",
     fontFamily: "inherit",
     fontSize: "inherit",
-    outline: "none",
-    "&:focus": {
-      border: "1px solid var(--vscode-focusBorder)",
-    },
-  },
-  buttonGroup: {
-    display: "flex",
-    gap: "4px",
   },
 };

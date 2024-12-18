@@ -1,14 +1,11 @@
 export const styles = {
+  // ChatInput styles
   container: {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
     padding: "8px",
     borderTop: "1px solid #e5e7eb",
-  },
-  inputWrapper: {
-    position: "relative",
-    flex: 1,
   },
   textareaContainer: {
     position: "relative",
@@ -20,7 +17,7 @@ export const styles = {
     resize: "none",
     minHeight: "36px",
     maxHeight: "150px",
-    padding: "8px 40px 8px 16px", // Espacio para el botón
+    padding: "8px 40px 8px 16px",
     borderRadius: "8px",
     border: "1px solid var(--vscode-input-border)",
     backgroundColor: "var(--vscode-input-background)",
@@ -50,57 +47,110 @@ export const styles = {
       backgroundColor: "var(--vscode-button-hoverBackground)",
     },
   },
-  sendIcon: {
-    width: "16px",
-    height: "16px",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-    pointerEvents: "none",
-  },
-  buttonInactive: {
-    opacity: 0.3,
-  },
-  inputDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
-  enterIcon: {
-    position: "absolute",
-    right: "12px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: "#000",
-  },
   actionsRow: {
     display: "flex",
     justifyContent: "flex-end",
     alignItems: "center",
   },
-  uploadButtons: {
-    display: "flex",
-    gap: "8px",
+
+  // FileSelector styles
+  filesWrapper: {
     position: "relative",
   },
-  iconButton: {
+  filesContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    padding: "4px",
+    alignItems: "center",
+  },
+  fileTag: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    padding: "8px",
-    borderRadius: "6px",
-    color: "#6b7280",
+    backgroundColor: "var(--vscode-button-secondaryBackground)",
+    color: "var(--vscode-button-secondaryForeground)",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+  },
+  removeButton: {
+    marginLeft: "4px",
+    border: "none",
+    background: "none",
+    color: "var(--vscode-button-secondaryForeground)",
+    cursor: "pointer",
+    padding: "0 4px",
+    fontSize: "12px",
+  },
+  addButton: {
+    display: "flex",
+    alignItems: "center",
+    padding: "2px 2px",
     backgroundColor: "transparent",
+    border: "1px dashed var(--vscode-button-secondaryBackground)",
+    borderRadius: "4px",
+    cursor: "pointer",
+    color: "var(--vscode-button-secondaryForeground)",
+  },
+  dropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "var(--vscode-dropdown-background)",
+    border: "1px solid var(--vscode-dropdown-border)",
+    borderRadius: "4px",
+    maxHeight: "200px",
+    overflowY: "auto",
+    zIndex: 1000,
+  },
+  fileList: {
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+  },
+  fileItem: {
+    padding: "4px 8px",
+    cursor: "pointer",
+    fontSize: "12px",
+    color: "var(--vscode-foreground)",
+    "&:hover": {
+      backgroundColor: "var(--vscode-list-hoverBackground)",
+    },
+  },
+
+  // ModeSwitch styles
+  modeSwitch: {
+    display: "flex",
+    gap: "8px",
+  },
+  modeButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "4px 8px",
+    borderRadius: "4px",
     border: "none",
     cursor: "pointer",
+    fontSize: "12px",
     transition: "all 0.2s",
   },
-  spinner: {
-    width: "16px",
-    height: "16px",
-    border: "2px solid #e5e7eb",
-    borderTop: "2px solid #3b82f6",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
+  activeMode: {
+    backgroundColor: "var(--vscode-button-background)",
+    color: "var(--vscode-button-foreground)",
+  },
+  inactiveMode: {
+    backgroundColor: "transparent",
+    color: "var(--vscode-foreground)",
+  },
+
+  // States
+  disabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+    pointerEvents: "none",
+  },
+  inactive: {
+    opacity: 0.3,
   },
 };

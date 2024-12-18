@@ -1,0 +1,65 @@
+¡Claro! Vamos a crear una función JavaScript que toma dos números como parámetros y devuelve el mayor de ellos. Además, agregaremos validaciones para asegurarnos de que los parámetros sean números.
+
+### Explicación detallada:
+
+1. **Validación de los parámetros**:
+
+   - Verifica si `num1` y `num2` son ambos números.
+     ```javascript
+     if (typeof num1 !== "number" || typeof num2 !== "number") {
+       throw new Error("Ambos parámetros deben ser números.");
+     }
+     ```
+   - Si no lo son, lanza un error con un mensaje descriptivo.
+
+2. **Comparación de los números**:
+   ```javascript
+   if (num1 > num2) {
+     return num1;
+   } else if (num2 > num1) {
+     return num2;
+   } else {
+     return "Los números son iguales";
+   }
+   ```
+   - Primero, verifica si `num1` es mayor que `num2`. Si lo es, devuelve `num1`.
+   - Si no es así, verifica si `num2` es mayor que `num1`. Si lo es, devuelve `num2`.
+   - Si ambos números son iguales, devuelve una cadena indicando que los números son iguales.
+
+### Uso de la función:
+
+Puedes usar esta función de la siguiente manera:
+
+```javascript
+try {
+  console.log(encontrarMayor(5, 10)); // Devuelve 10
+  console.log(encontrarMayor(20, 10)); // Devuelve 20
+  console.log(encontrarMayor(10, 10)); // Devuelve 'Los números son iguales'
+  console.log(encontrarMayor("5", 10)); // Lanza un error: Ambos parámetros deben ser números.
+} catch (error) {
+  console.error(error.message);
+}
+```
+
+### Elementos de la explicación:
+
+- **Función `encontrarMayor`**:
+
+  - Toma dos parámetros: `num1` y `num2`.
+  - Valida que ambos parámetros sean números.
+  - Compara los dos números y devuelve el mayor.
+  - Si los números son iguales, devuelve una cadena indicando eso.
+
+- **Validación de tipos**:
+
+  - Se usa `typeof` para verificar el tipo de dato de los parámetros.
+  - Si uno o ambos no son números, se lanza un error personalizado.
+
+- **Comparación y retorno**:
+
+  - Se usan sentencias `if`, `else if` y `else` para comparar los valores y devolver el resultado adecuado.
+
+- **Manejo de errores**:
+  - Se usa `try...catch` para atrapar y manejar posibles errores que puedan ocurrir durante la ejecución de la función.
+
+Esta explicación detallada te ayudará a entender cómo funcionan las funciones JavaScript, incluyendo validaciones, comparaciones y el manejo de errores.

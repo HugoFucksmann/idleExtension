@@ -1,42 +1,113 @@
-import React, { useState } from "react";
-
-import ModeSwitch from "./ModeSwitch";
-import { EnterIcon } from "./Icons";
+import React, { memo, useState } from "react";
+import { EnterIcon, WriteIcon, ChatIcon, FileIcon } from "./Icons";
 import { styles } from "./ChatInputStyles";
-import SelectedFiles from "./SelectedFiles";
+import { useAppContext } from "../../context/AppContext";
+import { useTextareaResize } from "../../hooks/useTextareaResize";
 
-const ChatInput = ({
-  onSendMessage,
-  isLoading,
-  projectFiles,
-  mode,
-  onModeChange,
-}) => {
-  const [input, setInput] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState([]);
+// FileSelector Component
+const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleFileSelect = (file) => {
+    onFileSelect(file);
+    setIsDropdownOpen(false);
+  };
+
+  return (
+    <div style={styles.filesWrapper}>
+      <div style={styles.filesContainer}>
+        {files.map((file) => (
+          <div key={file} style={styles.fileTag}>
+            <span>{file}</span>
+            <button
+              onClick={() => onRemove(file)}
+              style={styles.removeButton}
+              title="Remove file"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          style={styles.addButton}
+          title="Add file"
+        >
+          <FileIcon />
+        </button>
+      </div>
+
+      {isDropdownOpen && (
+        <div style={styles.dropdown}>
+          <ul style={styles.fileList}>
+            {projectFiles.map((file) => (
+              <li
+                key={file}
+                onClick={() => handleFileSelect(file)}
+                style={styles.fileItem}
+              >
+                {file}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ModeSwitch Component
+const ModeSwitch = memo(({ mode, onModeChange }) => (
+  <div style={styles.modeSwitch}>
+    <button
+      onClick={() => onModeChange("write")}
+      style={{
+        ...styles.modeButton,
+        ...(mode === "write" ? styles.activeMode : styles.inactiveMode),
+      }}
+    >
+      <WriteIcon />
+      Write
+    </button>
+    <button
+      onClick={() => onModeChange("chat")}
+      style={{
+        ...styles.modeButton,
+        ...(mode === "chat" ? styles.activeMode : styles.inactiveMode),
+      }}
+    >
+      <ChatIcon />
+      Chat
+    </button>
+  </div>
+));
+
+// Main ChatInput Component
+const ChatInput = ({ projectFiles }) => {
+  const {
+    input,
+    setInput,
+    selectedFiles,
+    isLoading,
+    mode,
+    handleModeChange,
+    handleSendMessage,
+    handleFileSelect,
+    handleRemoveFile
+  } = useAppContext();
+
+  const handleResize = useTextareaResize();
 
   const handleTextareaChange = (e) => {
-    const textarea = e.target;
-    setInput(textarea.value);
-
-    textarea.style.height = "auto";
-
-    const newHeight = Math.min(textarea.scrollHeight, 150);
-    textarea.style.height = `${newHeight}px`;
-
-    textarea.style.overflowY = textarea.scrollHeight > 150 ? "auto" : "hidden";
+    setInput(e.target.value);
+    handleResize(e.target);
   };
 
   const handleSendClick = () => {
-    if ((input.trim() !== "" || selectedFiles.length > 0) && !isLoading) {
-      onSendMessage(input, selectedFiles);
-      setInput("");
-      setSelectedFiles([]);
-
+    if (input.trim() || selectedFiles.length > 0) {
+      handleSendMessage(input, selectedFiles);
       const textarea = document.querySelector("textarea");
-      if (textarea) {
-        textarea.style.height = "auto";
-      }
+      if (textarea) textarea.style.height = "auto";
     }
   };
 
@@ -47,19 +118,9 @@ const ChatInput = ({
     }
   };
 
-  const handleFileSelect = (file) => {
-    if (!selectedFiles.includes(file)) {
-      setSelectedFiles((prev) => [...prev, file]);
-    }
-  };
-
-  const handleRemoveFile = (file) => {
-    setSelectedFiles((prev) => prev.filter((f) => f !== file));
-  };
-
   return (
     <div style={styles.container}>
-      <SelectedFiles
+      <FileSelector
         files={selectedFiles}
         onRemove={handleRemoveFile}
         projectFiles={projectFiles}
@@ -70,14 +131,12 @@ const ChatInput = ({
           value={input}
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
-          placeholder={
-            mode === "write" ? "Write something..." : "Ask something..."
-          }
+          placeholder={mode === "write" ? "Write something..." : "Ask something..."}
           disabled={isLoading}
           rows={1}
           style={{
             ...styles.textarea,
-            ...(isLoading && styles.inputDisabled),
+            ...(isLoading && styles.disabled),
           }}
         />
         <button
@@ -85,10 +144,8 @@ const ChatInput = ({
           disabled={isLoading}
           style={{
             ...styles.sendButton,
-            ...(isLoading && styles.buttonDisabled),
-            ...(input.trim() === "" &&
-              selectedFiles.length === 0 &&
-              styles.buttonInactive),
+            ...(isLoading && styles.disabled),
+            ...(!input.trim() && !selectedFiles.length && styles.inactive),
           }}
           title="Send message (Enter)"
         >
@@ -97,7 +154,7 @@ const ChatInput = ({
       </div>
 
       <div style={styles.actionsRow}>
-        <ModeSwitch mode={mode} onModeChange={onModeChange} />
+        <ModeSwitch mode={mode} onModeChange={handleModeChange} />
       </div>
     </div>
   );

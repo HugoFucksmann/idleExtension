@@ -5,7 +5,9 @@ function getFileName(filePath) {
   return filePath.split("/").pop().split("\\").pop();
 }
 
-const AttachedFiles = ({ files }) => {
+ const AttachedFiles = ({ files }) => {
+  console.log("files", files);
+  
   if (!files?.length) return null;
 
   return (
