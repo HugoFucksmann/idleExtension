@@ -1,11 +1,7 @@
-import React, { useRef, useEffect, memo, useState } from "react";
+import React, { useRef, useEffect, memo } from "react";
 import { styles } from "./styles";
 import { UserMessage } from "./Message/UserMessage";
 import { AIMessage } from "./Message/AIMessage";
-
-
-
-
 
 const Message = memo(({ message, messageIndex, onEdit }) => {
   return message.isUser ? (
@@ -16,32 +12,42 @@ const Message = memo(({ message, messageIndex, onEdit }) => {
 });
 
 // Componente principal de mensajes
-const ChatMessages = ({ messages, isLoading, currentMessage, onEditMessage }) => {
+const ChatMessages = ({ messages, isLoading, currentMessage, onEditMessage, children }) => {
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
     if (chatContainerRef.current) {
       const scrollToBottom = () => {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        const { scrollHeight, clientHeight } = chatContainerRef.current;
+        chatContainerRef.current.scrollTo({
+          top: scrollHeight - clientHeight,
+          behavior: 'smooth'
+        });
       };
-      setTimeout(scrollToBottom, 0);
+      scrollToBottom();
     }
   }, [messages, currentMessage]);
+
+  if (!messages || messages.length === 0) {
+    return children ? (
+      <div style={styles.emptyContainer}>{children}</div>
+    ) : null;
+  }
 
   return (
     <div ref={chatContainerRef} style={styles.chatContainer}>
       {messages.map((msg, index) => (
         <Message
-          key={index}
+          key={`${index}-${msg.text}`}
           message={msg}
           messageIndex={index}
           onEdit={onEditMessage}
         />
       ))}
-      {isLoading && (
+      {isLoading && currentMessage && (
         <Message
           message={{
-            text: currentMessage || "AI is thinking...",
+            text: currentMessage,
             isUser: false,
           }}
         />

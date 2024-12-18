@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AppContext = createContext();
 
@@ -20,7 +20,6 @@ export const AppProvider = ({ children, vscode }) => {
 
   const handleSendMessage = async (message, files) => {
     if ((message.trim() !== "" || files.length > 0) && !isLoading) {
-      // Agregar mensaje del usuario inmediatamente
       setMessages(prev => [...prev, {
         text: message,
         isUser: true,
@@ -84,6 +83,7 @@ export const AppProvider = ({ children, vscode }) => {
   };
 
   const clearChat = () => {
+    vscode.postMessage({ type: "clearConversation" });
     setMessages([]);
     setCurrentMessage("");
     setInput("");
@@ -91,22 +91,45 @@ export const AppProvider = ({ children, vscode }) => {
     setIsLoading(false);
   };
 
+  useEffect(() => {
+    const handleMessage = (event) => {
+      const message = event.data;
+      switch (message.type) {
+        case "response":
+          handleResponseMessage(message);
+          break;
+        case "error":
+          handleErrorMessage(message);
+          break;
+        case "chatLoaded":
+          setMessages(message.messages);
+          break;
+        case "conversationCleared":
+          clearChat();
+          break;
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
   const value = {
     vscode,
     input,
     setInput,
     selectedFiles,
     isLoading,
-    setIsLoading,
-    mode,
     messages,
+    setMessages,
     currentMessage,
-    handleModeChange,
+    mode,
     handleSendMessage,
-    handleFileSelect,
-    handleRemoveFile,
     handleResponseMessage,
     handleErrorMessage,
+    handleFileSelect,
+    handleRemoveFile,
+    handleModeChange,
     clearChat
   };
 

@@ -4,23 +4,45 @@ import { styles } from "./ChatInputStyles";
 import { useAppContext } from "../../context/AppContext";
 import { useTextareaResize } from "../../hooks/useTextareaResize";
 
-// FileSelector Component
+
 const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  console.log("[FileSelector] Props received:", {
+    filesCount: files.length,
+    projectFilesCount: projectFiles?.length || 0,
+    isDropdownOpen
+  });
 
   const handleFileSelect = (file) => {
+    console.log("[FileSelector] File selected:", file);
     onFileSelect(file);
     setIsDropdownOpen(false);
+  };
+
+  const toggleDropdown = () => {
+    console.log("[FileSelector] Toggling dropdown, current state:", !isDropdownOpen);
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
     <div style={styles.filesWrapper}>
       <div style={styles.filesContainer}>
+      <button
+          onClick={toggleDropdown}
+          style={styles.addButton}
+          title="Add file"
+        >
+          <FileIcon />
+        </button>
         {files.map((file) => (
           <div key={file} style={styles.fileTag}>
             <span>{file}</span>
             <button
-              onClick={() => onRemove(file)}
+              onClick={() => {
+                console.log("[FileSelector] Removing file:", file);
+                onRemove(file);
+              }}
               style={styles.removeButton}
               title="Remove file"
             >
@@ -28,27 +50,25 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
             </button>
           </div>
         ))}
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          style={styles.addButton}
-          title="Add file"
-        >
-          <FileIcon />
-        </button>
+       
       </div>
 
       {isDropdownOpen && (
         <div style={styles.dropdown}>
           <ul style={styles.fileList}>
-            {projectFiles.map((file) => (
-              <li
-                key={file}
-                onClick={() => handleFileSelect(file)}
-                style={styles.fileItem}
-              >
-                {file}
-              </li>
-            ))}
+            {projectFiles?.length > 0 ? (
+              projectFiles.map((file) => (
+                <li
+                  key={file}
+                  onClick={() => handleFileSelect(file)}
+                  style={styles.fileItem}
+                >
+                  {file}
+                </li>
+              ))
+            ) : (
+              <li style={styles.fileItem}>No files available</li>
+            )}
           </ul>
         </div>
       )}

@@ -31,10 +31,17 @@ export class OllamaService {
           selectedFiles
         );
 
+      // Agregar mensaje del usuario
       this._chatManager.addMessage({
         role: "user",
         content: messageWithContext,
       });
+
+      // Guardar inmediatamente después del mensaje del usuario
+      await this._storage.saveChat(
+        this._chatManager.getCurrentChatId(),
+        this._chatManager.getCurrentMessages()
+      );
 
       const response = await this._api.generateResponse(
         this._chatManager.formatConversation(),
@@ -42,19 +49,20 @@ export class OllamaService {
       );
 
       if (response) {
+        // Agregar respuesta del asistente
         this._chatManager.addMessage({ role: "assistant", content: response });
+        // Guardar después de la respuesta del asistente
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
           this._chatManager.getCurrentMessages()
         );
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error in sendToOllama:", error);
       if (view) {
         view.webview.postMessage({
           type: "error",
-          message:
-            "Error al comunicarse con Ollama. Verifica que esté ejecutándose.",
+          message: "Error al procesar el mensaje. Por favor, intente de nuevo.",
         });
       }
     }
@@ -75,10 +83,11 @@ export class OllamaService {
         this._chatManager.setConversation(chat.messages);
         return true;
       }
+      return false;
     } catch (error) {
       console.error("Error loading chat:", error);
+      return false;
     }
-    return false;
   }
 
   clearConversation(): void {

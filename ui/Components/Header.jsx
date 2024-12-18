@@ -32,7 +32,7 @@ const styles = {
   },
 };
 
-function Header() {
+function Header({ setShowHistory }) {
   const { vscode } = useAppContext();
 
   const handleNewChat = () => {
@@ -44,7 +44,8 @@ function Header() {
   };
 
   const handleHistory = () => {
-    vscode.postMessage({ type: "showFullHistory" });
+    setShowHistory(true);
+    vscode.postMessage({ type: "loadHistory" });
   };
 
   return (

@@ -32,21 +32,21 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     );
 
     webviewView.webview.onDidReceiveMessage(async (data) => {
-      this.handleMessage(data);
+      await this.handleMessage(data);
     });
   }
 
-  private handleMessage(message: any) {
+  private async handleMessage(message: any) {
     switch (message.type) {
       case "sendMessage":
-        this._ollamaService.sendToOllama(
+        await this._ollamaService.sendToOllama(
           message.message,
           message.selectedFiles || [],
           this._view
         );
         break;
       case "editMessage":
-        this._ollamaService.editAndResendMessage(
+        await this._ollamaService.editAndResendMessage(
           message.messageIndex,
           message.message,
           message.selectedFiles || [],
@@ -61,21 +61,20 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         vscode.commands.executeCommand("workbench.action.closeSidebar");
         break;
       case "loadHistory":
-        this.loadHistory();
+        await this.loadHistory();
         break;
       case "loadChat":
-        this.loadChat(message.chatId);
+        await this.loadChat(message.chatId);
         break;
       case "showHistory":
-        this.loadHistory();
+        await this.loadHistory();
         this._view?.webview.postMessage({ type: "showFullHistory" });
         break;
       case "getProjectFiles":
-        this._ollamaService.getProjectFiles().then((files) => {
-          this._view?.webview.postMessage({
-            type: "projectFiles",
-            files,
-          });
+        const files = await this._ollamaService.getProjectFiles();
+        this._view?.webview.postMessage({
+          type: "projectFiles",
+          files,
         });
         break;
       case "applyChanges":
@@ -97,12 +96,17 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private loadChat(chatId: string) {
+  private async loadChat(chatId: string) {
     if (this._ollamaService.loadChat(chatId)) {
       const messages = this._ollamaService.getCurrentMessages();
       this._view?.webview.postMessage({
         type: "chatLoaded",
-        messages,
+        messages: messages,
+      });
+    } else {
+      this._view?.webview.postMessage({
+        type: "error",
+        message: "No se pudo cargar el chat. Por favor, intente de nuevo.",
       });
     }
   }

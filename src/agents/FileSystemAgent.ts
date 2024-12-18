@@ -8,13 +8,18 @@ export class FileSystemAgent {
   ) {}
 
   async getProjectFiles(): Promise<string[]> {
+    console.log("[FileSystemAgent] Starting getProjectFiles");
+    console.log("[FileSystemAgent] Workspace root:", this.workspaceRoot);
+
     if (!this.workspaceRoot) {
+      console.log("[FileSystemAgent] No workspace root found");
       return [];
     }
 
     const files: string[] = [];
 
     const getFiles = async (dirPath: string) => {
+      console.log("[FileSystemAgent] Scanning directory:", dirPath);
       const entries = await vscode.workspace.fs.readDirectory(
         vscode.Uri.file(dirPath)
       );
@@ -23,7 +28,8 @@ export class FileSystemAgent {
         const fullPath = path.join(dirPath, name);
 
         // Ignorar carpetas node_modules y .git
-        if (name === "node_modules" || name === ".git") {
+        if (name === "node_modules" || name === ".git"|| name === "build" || name === "dist" || name === "out") {
+          console.log("[FileSystemAgent] Skipping directory:", name);
           continue;
         }
 
@@ -33,11 +39,13 @@ export class FileSystemAgent {
           // Convertir path absoluto a relativo
           const relativePath = path.relative(this.workspaceRoot!, fullPath);
           files.push(relativePath);
+          console.log("[FileSystemAgent] Added file:", relativePath);
         }
       }
     };
 
     await getFiles(this.workspaceRoot);
+    console.log("[FileSystemAgent] Total files found:", files.length);
     return files;
   }
 

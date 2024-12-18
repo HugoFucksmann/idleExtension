@@ -94,7 +94,7 @@ export const styles = {
   },
   dropdown: {
     position: "absolute",
-    top: "100%",
+    bottom: "100%",
     left: 0,
     right: 0,
     backgroundColor: "var(--vscode-dropdown-background)",
@@ -102,7 +102,7 @@ export const styles = {
     borderRadius: "4px",
     maxHeight: "200px",
     overflowY: "auto",
-    zIndex: 1000,
+    zIndex: 1,
   },
   fileList: {
     margin: 0,

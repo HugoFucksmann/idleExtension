@@ -8,6 +8,13 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
   },
+  emptyContainer: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+  },
   message: {
     marginBottom: "10px",
     padding: "8px",
@@ -24,26 +31,65 @@ export const styles = {
   aiMessage: {
     alignSelf: "flex-start",
   },
-  codeBlock: {
-    backgroundColor: "var(--vscode-editor-background)",
-    border: "1px solid var(--vscode-input-border)",
-    borderRadius: "4px",
-    margin: "8px 0",
-    overflow: "hidden",
+  codeBlockContainer: {
+    margin: '1em 0',
+    borderRadius: '4px',
+    overflow: 'hidden',
+    backgroundColor: 'var(--vscode-input-background)',
+    border: '1px solid var(--vscode-input-border)',
   },
   codeBlockHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "6px 12px",
-    backgroundColor: "var(--vscode-editor-background)",
-    borderBottom: "1px solid var(--vscode-input-border)",
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderBottom: '1px solid var(--vscode-input-border)',
   },
-  codeBlockContent: {
-    padding: "12px",
+  filename: {
+    fontFamily: 'Consolas, Monaco, monospace',
+    marginRight: 'auto',
+    color: 'var(--vscode-foreground)',
+  },
+  buttonContainer: {
+    display: 'flex',
+    gap: '8px',
+  },
+  button: {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--vscode-foreground)',
+    borderRadius: '4px',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'var(--vscode-toolbar-hoverBackground)',
+    },
+  },
+  pre: {
     margin: 0,
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
+    padding: '1em',
+    overflow: 'auto',
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: 'var(--vscode-foreground)',
+    '&::-webkit-scrollbar': {
+      width: '8px',
+      height: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: 'transparent',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: 'var(--vscode-scrollbarSlider-background)',
+      borderRadius: '4px',
+      '&:hover': {
+        background: 'var(--vscode-scrollbarSlider-hoverBackground)',
+      },
+    },
   },
   attachedFiles: {
     display: "flex",
@@ -106,5 +152,27 @@ export const styles = {
     resize: "vertical",
     fontFamily: "inherit",
     fontSize: "inherit",
+  },
+  markdownContent: {
+    padding: '8px',
+    lineHeight: '1.5',
+    '& h1, & h2, & h3, & h4, & h5, & h6': {
+      marginTop: '16px',
+      marginBottom: '8px',
+      fontWeight: 'bold',
+    },
+    '& p': {
+      marginBottom: '8px',
+    },
+    '& ul, & ol': {
+      paddingLeft: '20px',
+      marginBottom: '8px',
+    },
+    '& strong': {
+      fontWeight: 'bold',
+    },
+    '& em': {
+      fontStyle: 'italic',
+    },
   },
 };

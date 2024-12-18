@@ -3,7 +3,7 @@ const path = require("path");
 module.exports = {
   target: "node",
   entry: {
-    extension: "./extension.ts",
+    extension: "./src/extension.ts",
     webview: "./ui/webview.jsx",
   },
   output: {
@@ -16,6 +16,7 @@ module.exports = {
     vscode: "commonjs vscode",
     child_process: "commonjs child_process",
     path: "commonjs path",
+    fs: "commonjs fs"
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js", ".jsx"],

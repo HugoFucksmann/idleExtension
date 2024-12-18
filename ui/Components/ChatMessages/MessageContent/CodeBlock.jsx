@@ -1,20 +1,19 @@
 import React, { memo, useState, useEffect } from "react";
 import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css"; // Tema oscuro moderno
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-markdown";
 import { styles } from "../styles";
 import { useAppContext } from "../../../context/AppContext";
 import { IconApply, IconCopy, IconTick } from "../../../IconstApp";
 
-
 const PrismConfig = memo(() => {
   useEffect(() => {
-    require("prismjs/components/prism-javascript");
-    require("prismjs/components/prism-jsx");
-    require("prismjs/components/prism-typescript");
-    require("prismjs/components/prism-python");
-    require("prismjs/components/prism-json");
-    require("prismjs/components/prism-css");
-    require("prismjs/components/prism-markdown");
-
     // Initialize Prism languages
     Prism.languages = {
       ...Prism.languages,
@@ -31,7 +30,6 @@ const PrismConfig = memo(() => {
   return null;
 });
 
-
 const CodeBlockHeader = memo(({ filename, onCopy, onApply }) => {
   const [copyState, setCopyState] = useState({ copied: false, timer: null });
   const [applyState, setApplyState] = useState({ applied: false, timer: null });
@@ -40,101 +38,99 @@ const CodeBlockHeader = memo(({ filename, onCopy, onApply }) => {
     if (state.timer) clearTimeout(state.timer);
     
     await action();
-    setState({
+    setState(prev => ({
       [action === onCopy ? "copied" : "applied"]: true,
       timer: setTimeout(() => {
-        setState({ [action === onCopy ? "copied" : "applied"]: false, timer: null });
+        setState(prev => ({ [action === onCopy ? "copied" : "applied"]: false, timer: null }));
       }, 2000),
-    });
+    }));
   };
-
-  useEffect(() => {
-    return () => {
-      if (copyState.timer) clearTimeout(copyState.timer);
-      if (applyState.timer) clearTimeout(applyState.timer);
-    };
-  }, []);
 
   return (
     <div style={styles.codeBlockHeader}>
-      <span>{filename || "code.jsx"}</span>
-      <div style={styles.buttonGroup}>
-        <button
-          onClick={() => handleStateChange(onApply, applyState, setApplyState)}
-          style={{
-            ...styles.copyButton,
-            color: applyState.applied ? "#4CAF50" : "currentColor",
-          }}
-          title="Apply changes"
-        >
-          <IconApply />
-        </button>
+      {filename && <span style={styles.filename}>{filename}</span>}
+      <div style={styles.buttonContainer}>
         <button
           onClick={() => handleStateChange(onCopy, copyState, setCopyState)}
-          style={{
-            ...styles.copyButton,
-            color: copyState.copied ? "#4CAF50" : "currentColor",
-          }}
+          style={styles.button}
           title="Copy code"
         >
           {copyState.copied ? <IconTick /> : <IconCopy />}
+        </button>
+        <button
+          onClick={() => handleStateChange(onApply, applyState, setApplyState)}
+          style={styles.button}
+          title="Apply changes"
+        >
+          {applyState.applied ? <IconTick /> : <IconApply />}
         </button>
       </div>
     </div>
   );
 });
 
-const CodeBlockContent = memo(({ content, language }) => {
-  useEffect(() => {
-    // Solo resaltar si hay contenido
-    if (content?.trim()) {
-      Prism.highlightAll();
-    }
-  }, [content]);
-
-  return (
-    <pre style={styles.codeBlockContent}>
-      <code className={`language-${language || "javascript"}`}>{content}</code>
-    </pre>
-  );
-});
-
-
-const CodeBlock = memo(({ content, language, filename }) => {
+const CodeBlock = ({ language = "javascript", content, filename }) => {
   const { vscode } = useAppContext();
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    Prism.highlightAll();
+  }, [content, language]);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(content);
-    } catch (error) {
-      console.error("Failed to copy:", error);
+      return true;
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+      return false;
     }
   };
 
   const handleApply = async () => {
-    vscode.postMessage({
-      type: "applyChanges",
-      payload: {
-        filename: filename || "code.jsx",
+    try {
+      vscode.postMessage({
+        command: 'applyChanges',
         content,
-      },
-    });
+        filename
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to apply changes:", err);
+      return false;
+    }
   };
 
   // No renderizar si no hay contenido
   if (!content?.trim()) return null;
 
   return (
-    <div style={styles.codeBlock}>
+    <div style={styles.codeBlockContainer}>
       <PrismConfig />
       <CodeBlockHeader
         filename={filename}
         onCopy={handleCopy}
         onApply={handleApply}
       />
-      <CodeBlockContent content={content} language={language} />
+      <pre style={{
+        ...styles.pre,
+        backgroundColor: 'transparent',
+        margin: 0,
+        padding: '1em',
+        borderRadius: '0 0 4px 4px',
+        overflow: 'auto',
+      }}>
+        <code className={`language-${language}`} style={{
+          fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          tabSize: 2,
+        }}>
+          {content}
+        </code>
+      </pre>
     </div>
   );
-});
+};
 
-export default CodeBlock;
+export default memo(CodeBlock);

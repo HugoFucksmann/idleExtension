@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-
+import { Message } from '../types/chatTypes';
 export class OllamaAPI {
   private _controller: AbortController | null = null;
 
@@ -59,7 +59,25 @@ export class OllamaAPI {
       return buffer;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        return await this.readDefaultResponse();
+        if (view) {
+         /*  view.webview.postMessage({
+            type: "error",
+            message: "Error connecting to Ollama. Please make sure it's running.",
+          }); */
+           const defaultResponse = await this.readDefaultResponse();
+      const systemMessage: Message = {
+        role: "assistant",
+        content: defaultResponse
+      };
+      view.webview.postMessage({
+        type: "response",
+        message: systemMessage.content,
+        done: true
+      });
+      return systemMessage.content;
+    
+        }
+        return "";
       }
       return "";
     } finally {

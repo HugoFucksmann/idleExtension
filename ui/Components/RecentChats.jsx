@@ -6,12 +6,8 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     padding: "20px",
+    flex: 1,
     overflow: "auto",
   },
   title: {
@@ -46,8 +42,8 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     display: "-webkit-box",
-    "-webkit-line-clamp": "2",
-    "-webkit-box-orient": "vertical",
+    WebkitLineClamp: "2",
+    WebkitBoxOrient: "vertical",
   },
   timestamp: {
     fontSize: "11px",
@@ -55,30 +51,35 @@ const styles = {
   },
 };
 
-function RecentChats({ history, onChatSelect }) {
-  const recentChats = history.slice(-4).reverse();
-
-  const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString();
+const RecentChats = ({ history, onChatSelect }) => {
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>Chats Recientes</h2>
+      <h2 style={styles.title}>Recent Chats</h2>
       <div style={styles.chatGrid}>
-        {recentChats.map((chat) => (
+        {history.map((chat) => (
           <div
             key={chat.id}
             style={styles.chatItem}
             onClick={() => onChatSelect(chat.id)}
+            role="button"
+            tabIndex={0}
           >
-            <div style={styles.summary}>{chat.summary}</div>
-            <div style={styles.timestamp}>{formatDate(chat.timestamp)}</div>
+            <div style={styles.timestamp}>
+              {formatTimestamp(chat.timestamp)}
+            </div>
+            <div style={styles.summary}>
+              {chat.summary || chat.messages[0]?.content || "Empty chat"}
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
-}
+};
 
 export default RecentChats;
