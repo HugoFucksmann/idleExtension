@@ -5,7 +5,7 @@ import { FileEditorAgent } from "../agents/FileEditorAgent";
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "aiChat.chatView";
-  private _view?: vscode.WebviewView;
+  private _view?: vscode.WebviewView  | undefined;
   private _ollamaService: OllamaService;
 
   constructor(

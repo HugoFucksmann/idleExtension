@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
+import { AppConfig } from "../config/AppConfig";
 
 export class OllamaAPI {
   private _controller: AbortController | null = null;
-  private readonly TIMEOUT_MS = 30000; // 30 segundos de timeout
-  private readonly CHUNK_SIZE = 1024 * 16; // 16KB chunks
 
   async generateResponse(
     prompt: string,
-    view: vscode.WebviewView | undefined
+    view: vscode.WebviewView  | undefined
   ): Promise<string> {
     if (this._controller) {
       this._controller.abort();
@@ -19,7 +18,7 @@ export class OllamaAPI {
       if (this._controller) {
         this._controller.abort();
       }
-    }, this.TIMEOUT_MS);
+    }, AppConfig.chat.timeoutMs);
 
     try {
       const response = await fetch("http://localhost:11434/api/generate", {
@@ -58,8 +57,7 @@ export class OllamaAPI {
             const data = JSON.parse(line);
             currentChunk += data.response;
 
-            // Enviar chunks cuando alcancen el tamaño definido
-            if (currentChunk.length >= this.CHUNK_SIZE) {
+            if (currentChunk.length >= AppConfig.chat.chunkSize) {
               buffer += currentChunk;
               if (view) {
                 view.webview.postMessage({
@@ -77,7 +75,6 @@ export class OllamaAPI {
         }
       }
 
-      // Enviar el último chunk si existe
       if (currentChunk.length > 0) {
         buffer += currentChunk;
         if (view) {
@@ -106,7 +103,6 @@ export class OllamaAPI {
     }
   }
 
-  // Método para reintentar la solicitud
   private async retryWithBackoff<T>(
     operation: () => Promise<T>,
     maxRetries: number = 3,

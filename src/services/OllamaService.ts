@@ -1,16 +1,20 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
-import { ChatHistory, Message } from "../types/chatTypes";
+import { ChatHistory, Message } from "../types/types";
 import { ChatHistoryStorage } from "./ChatHistoryStorage";
 import { ChatManager } from "./ChatManager";
 import { OllamaAPI } from "./OllamaAPI";
 import { FileSystemAgent } from "../agents/FileSystemAgent";
+import { MessageBroker } from "./MessageBroker";
+import { MessageType } from "../types/types";
+
 
 export class OllamaService {
   private _storage: ChatHistoryStorage;
   private _chatManager: ChatManager;
   private _api: OllamaAPI;
   private _fileSystemAgent: FileSystemAgent;
+  private _messageBroker: MessageBroker;
   private _isHistoryChat: boolean = false;
 
   constructor(context: vscode.ExtensionContext) {
@@ -18,21 +22,21 @@ export class OllamaService {
     this._chatManager = new ChatManager();
     this._api = new OllamaAPI();
     this._fileSystemAgent = new FileSystemAgent();
+    this._messageBroker = MessageBroker.getInstance();
   }
 
   async sendToOllama(
     userMessage: string,
     selectedFiles: string[] = [],
-    view: vscode.WebviewView | undefined
+    view: vscode.WebviewView  | undefined
   ): Promise<void> {
     try {
-      const messageWithContext =
-        await this._fileSystemAgent.prepareMessageWithContext(
-          userMessage,
-          selectedFiles
-        );
+      this._messageBroker.setView(view);
+      const messageWithContext = await this._fileSystemAgent.prepareMessageWithContext(
+        userMessage,
+        selectedFiles
+      );
 
-      // Si es una conversación nueva (sin mensajes), guardar inmediatamente
       const currentMessagesResponse = await this._chatManager.getCurrentMessages();
       const isNewConversation = currentMessagesResponse.messages.length === 0;
       
@@ -43,13 +47,11 @@ export class OllamaService {
         );
       }
 
-      // Agregar mensaje del usuario
       await this._chatManager.addMessage({
         role: "user",
         content: messageWithContext,
       });
 
-      // Guardar después del mensaje del usuario
       const currentMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
@@ -63,9 +65,7 @@ export class OllamaService {
       );
 
       if (response) {
-        // Agregar respuesta del asistente
         await this._chatManager.addMessage({ role: "assistant", content: response });
-        // Guardar después de la respuesta del asistente
         const updatedMessages = await this._chatManager.getAllMessages();
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
@@ -74,17 +74,14 @@ export class OllamaService {
       }
     } catch (error) {
       console.error("Error in sendToOllama:", error);
-      if (view) {
-        view.webview.postMessage({
-          type: "error",
-          message: "Error al procesar el mensaje. Por favor, intente de nuevo.",
-        });
-      }
+      this._messageBroker.sendError("Error al procesar el mensaje. Por favor, intente de nuevo.");
     }
   }
 
   async loadChatHistory(): Promise<ChatHistory[]> {
-    return this._storage.loadHistory();
+    const history = await this._storage.loadHistory();
+    this._messageBroker.sendHistoryLoaded(history);
+    return history;
   }
 
   async loadChat(chatId: string): Promise<boolean> {
@@ -136,7 +133,7 @@ export class OllamaService {
     messageIndex: number,
     userMessage: string,
     selectedFiles: string[],
-    view: vscode.WebviewView | undefined
+    view: vscode.WebviewView  | undefined
   ): Promise<void> {
     try {
       // Truncar la conversación hasta el mensaje editado
@@ -153,12 +150,7 @@ export class OllamaService {
       );
     } catch (error) {
       console.error("Error editing message:", error);
-      if (view) {
-        view.webview.postMessage({
-          type: "error",
-          message: "Error al editar el mensaje",
-        });
-      }
+      this._messageBroker.sendError("Error al editar el mensaje");
     }
   }
 }

@@ -1,17 +1,15 @@
-import { Message } from "../types/chatTypes";
+import { Message } from "../types/types";
+import { IdGenerator } from "../utils/IdGenerator";
+import { AppConfig } from "../config/AppConfig";
 
 export class ChatManager {
   private _conversationHistory: Message[] = [];
   private _currentChatId: string;
   private _lock: Promise<void> = Promise.resolve();
-  private readonly PAGE_SIZE = 50;
+  private readonly PAGE_SIZE = AppConfig.chat.pageSize;
 
   constructor() {
-    this._currentChatId = this.generateChatId();
-  }
-
-  private generateChatId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    this._currentChatId = IdGenerator.generate();
   }
 
   private async withLock<T>(operation: () => Promise<T>): Promise<T> {
@@ -37,10 +35,9 @@ export class ChatManager {
 
   async addMessage(message: Message): Promise<void> {
     await this.withLock(async () => {
-      // Asignar un ID temporal único al mensaje
       const tempMessage = {
         ...message,
-        tempId: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        tempId: IdGenerator.generate()
       };
       this._conversationHistory.push(tempMessage);
     });
@@ -55,16 +52,15 @@ export class ChatManager {
   async clearConversation(): Promise<void> {
     await this.withLock(async () => {
       this._conversationHistory = [];
-      this._currentChatId = this.generateChatId();
+      this._currentChatId = IdGenerator.generate();
     });
   }
 
   async setConversation(messages: Message[]): Promise<void> {
     await this.withLock(async () => {
-      // Asignar IDs temporales a los mensajes existentes
       this._conversationHistory = messages.map(msg => ({
         ...msg,
-        tempId: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        tempId: IdGenerator.generate()
       }));
     });
   }
@@ -77,13 +73,11 @@ export class ChatManager {
   }> {
     return await this.withLock(async () => {
       const totalMessages = this._conversationHistory.length;
-      const totalPages = Math.ceil(totalMessages / this.PAGE_SIZE);
+      const totalPages = Math.ceil(totalMessages / AppConfig.chat.pageSize);
       
-      // Calcular índices para la paginación desde el final
-      const end = totalMessages - (page * this.PAGE_SIZE);
-      const start = Math.max(end - this.PAGE_SIZE, 0);
+      const end = totalMessages - (page * AppConfig.chat.pageSize);
+      const start = Math.max(end - AppConfig.chat.pageSize, 0);
       
-      // Obtener los mensajes en el orden correcto
       const pageMessages = this._conversationHistory.slice(start, end);
       
       return {
@@ -134,11 +128,10 @@ export class ChatManager {
   async editMessage(index: number, newMessage: Message): Promise<void> {
     await this.withLock(async () => {
       if (index >= 0 && index < this._conversationHistory.length) {
-        // Mantener el tempId si existe
         const tempId = this._conversationHistory[index].tempId;
         this._conversationHistory[index] = {
           ...newMessage,
-          tempId: tempId || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          tempId: tempId || IdGenerator.generate()
         };
       }
     });
