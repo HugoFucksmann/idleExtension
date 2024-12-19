@@ -41,14 +41,7 @@ La extensión está organizada en varios módulos que trabajan juntos para propo
      - `messages`: Array de mensajes (tipo Message[])
      - `summary`: Resumen opcional de la conversación
 
-## Relaciones y Flujo de Datos
 
-graph TD
-A[extension.ts] --> B[AIChatViewProvider]
-B --> C[OllamaService]
-C --> D[ChatManager]
-C --> E[ChatHistoryStorage]
-C --> F[OllamaAPI]
 
 #### Uso de los Tipos
 
