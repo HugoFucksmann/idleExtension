@@ -33,7 +33,8 @@ export class OllamaService {
         );
 
       // Si es una conversación nueva (sin mensajes), guardar inmediatamente
-      const isNewConversation = this._chatManager.getCurrentMessages().length === 0;
+      const currentMessages = await this._chatManager.getAllMessages();
+      const isNewConversation = currentMessages.length === 0;
       if (isNewConversation && !this._isHistoryChat) {
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
@@ -42,29 +43,31 @@ export class OllamaService {
       }
 
       // Agregar mensaje del usuario
-      this._chatManager.addMessage({
+      await this._chatManager.addMessage({
         role: "user",
         content: messageWithContext,
       });
 
       // Guardar después del mensaje del usuario
+      const updatedMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
-        this._chatManager.getCurrentMessages()
+        updatedMessages
       );
 
       const response = await this._api.generateResponse(
-        this._chatManager.formatConversation(),
+        await this._chatManager.formatConversation(),
         view
       );
 
       if (response) {
         // Agregar respuesta del asistente
-        this._chatManager.addMessage({ role: "assistant", content: response });
+        await this._chatManager.addMessage({ role: "assistant", content: response });
         // Guardar después de la respuesta del asistente
+        const finalMessages = await this._chatManager.getAllMessages();
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
-          this._chatManager.getCurrentMessages()
+          finalMessages
         );
       }
     } catch (error) {
@@ -82,7 +85,7 @@ export class OllamaService {
     return this._storage.loadHistory();
   }
 
-  loadChat(chatId: string): boolean {
+  async loadChat(chatId: string): Promise<boolean> {
     try {
       const chats = JSON.parse(
         fs.readFileSync(this._storage.getHistoryPath(), "utf-8")
@@ -90,7 +93,7 @@ export class OllamaService {
       const chat = chats.find((c: ChatHistory) => c.id === chatId);
       if (chat) {
         this._chatManager.setCurrentChatId(chatId);
-        this._chatManager.setConversation(chat.messages);
+        await this._chatManager.setConversation(chat.messages);
         this._isHistoryChat = true;
         return true;
       }
@@ -104,22 +107,26 @@ export class OllamaService {
   async clearConversation(): Promise<void> {
     // Si NO es un chat del historial y hay mensajes, guardar antes de limpiar
     if (!this._isHistoryChat) {
-      const currentMessages = this._chatManager.getCurrentMessages();
+      const currentMessages = await this._chatManager.getAllMessages();
       if (currentMessages.length > 0) {
         const oldChatId = Date.now().toString();
         await this._storage.saveChat(oldChatId, currentMessages);
       }
       // Limpiar la conversación solo si no es del historial
-      this._chatManager.clearConversation();
+      await this._chatManager.clearConversation();
     }
     // Si es del historial, solo resetear los mensajes pero mantener el mismo ID
     else {
-      this._chatManager.clearMessages();
+      await this._chatManager.clearMessages();
     }
   }
 
-  getCurrentMessages(): Message[] {
-    return this._chatManager.getCurrentMessages();
+  async getCurrentMessages(page: number = 0): Promise<{
+    messages: Message[];
+    totalPages: number;
+    currentPage: number;
+  }> {
+    return await this._chatManager.getCurrentMessages(page);
   }
 
   async getProjectFiles(): Promise<string[]> {
@@ -134,15 +141,16 @@ export class OllamaService {
   ): Promise<void> {
     try {
       // Truncar la conversación hasta el mensaje editado
-      this._chatManager.truncateConversationAtIndex(messageIndex);
+      await this._chatManager.truncateConversationAtIndex(messageIndex);
 
       // Enviar el mensaje editado
       await this.sendToOllama(userMessage, selectedFiles, view);
 
       // Guardar la conversación actualizada
+      const updatedMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
-        this._chatManager.getCurrentMessages()
+        updatedMessages
       );
     } catch (error) {
       console.error("Error editing message:", error);

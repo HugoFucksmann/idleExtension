@@ -4,20 +4,16 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "8px",
-    borderTop: "1px solid #e5e7eb",
-  },
-  textareaContainer: {
-    position: "relative",
-    display: "flex",
+    padding: "8px 12px",
     width: "100%",
+    boxSizing: "border-box",
   },
   textarea: {
     width: "100%",
     resize: "none",
     minHeight: "36px",
     maxHeight: "150px",
-    padding: "8px 40px 8px 16px",
+    padding: "8px 40px 8px 16px",  // Ajustar padding para el espacio del icono
     borderRadius: "8px",
     border: "1px solid var(--vscode-input-border)",
     backgroundColor: "var(--vscode-input-background)",
@@ -28,24 +24,26 @@ export const styles = {
     lineHeight: "1.5",
     scrollbarWidth: "thin",
     scrollbarColor: "var(--vscode-scrollbarSlider-background) transparent",
+    boxSizing: "border-box",
+  },
+  form: {
+    position: "relative", // Añadido
+    display: "flex",
+    flexDirection: "row",  // Mantener en "row"
+    width: "100%",
+    boxSizing: "border-box",
   },
   sendButton: {
-    position: "absolute",
-    right: "8px",
-    bottom: "8px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "4px",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    borderRadius: "4px",
-    color: "var(--vscode-button-foreground)",
-    transition: "all 0.2s ease",
-    "&:hover": {
-      backgroundColor: "var(--vscode-button-hoverBackground)",
-    },
+    position: "absolute",  // Añadido
+  right: "16px",  // Posición a la derecha dentro del textarea
+  bottom: "16px",  // Posición hacia abajo dentro del textarea
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   },
   actionsRow: {
     display: "flex",

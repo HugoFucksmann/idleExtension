@@ -2,51 +2,79 @@ import * as vscode from "vscode";
 import * as path from "path";
 
 export class FileSystemAgent {
+  private fileWatcher: vscode.FileSystemWatcher | null = null;
+  private fileCache: Map<string, { content: string; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+  private readonly MAX_FILE_SIZE = 1024 * 1024; // 1MB para lectura parcial
+
   constructor(
     private workspaceRoot: string | undefined = vscode.workspace
       .workspaceFolders?.[0].uri.fsPath
-  ) {}
+  ) {
+    this.initializeFileWatcher();
+  }
+
+  private initializeFileWatcher() {
+    if (!this.workspaceRoot) return;
+
+    this.fileWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(this.workspaceRoot, "**/*")
+    );
+
+    this.fileWatcher.onDidChange((uri) => {
+      const filePath = uri.fsPath;
+      this.fileCache.delete(filePath);
+    });
+
+    this.fileWatcher.onDidDelete((uri) => {
+      const filePath = uri.fsPath;
+      this.fileCache.delete(filePath);
+    });
+  }
 
   async getProjectFiles(): Promise<string[]> {
-    console.log("[FileSystemAgent] Starting getProjectFiles");
-    console.log("[FileSystemAgent] Workspace root:", this.workspaceRoot);
-
     if (!this.workspaceRoot) {
-      console.log("[FileSystemAgent] No workspace root found");
       return [];
     }
 
     const files: string[] = [];
+    const processedDirs = new Set<string>();
 
     const getFiles = async (dirPath: string) => {
-      console.log("[FileSystemAgent] Scanning directory:", dirPath);
-      const entries = await vscode.workspace.fs.readDirectory(
-        vscode.Uri.file(dirPath)
-      );
+      if (processedDirs.has(dirPath)) return;
+      processedDirs.add(dirPath);
 
-      for (const [name, type] of entries) {
-        const fullPath = path.join(dirPath, name);
+      try {
+        const entries = await vscode.workspace.fs.readDirectory(
+          vscode.Uri.file(dirPath)
+        );
 
-        // Ignorar carpetas node_modules y .git
-        if (name === "node_modules" || name === ".git"|| name === "build" || name === "dist" || name === "out") {
-          console.log("[FileSystemAgent] Skipping directory:", name);
-          continue;
+        for (const [name, type] of entries) {
+          const fullPath = path.join(dirPath, name);
+
+          if (this.shouldIgnoreFile(name)) {
+            continue;
+          }
+
+          if (type === vscode.FileType.Directory) {
+            await getFiles(fullPath);
+          } else {
+            const relativePath = path.relative(this.workspaceRoot!, fullPath);
+            files.push(relativePath);
+          }
         }
-
-        if (type === vscode.FileType.Directory) {
-          await getFiles(fullPath);
-        } else {
-          // Convertir path absoluto a relativo
-          const relativePath = path.relative(this.workspaceRoot!, fullPath);
-          files.push(relativePath);
-          console.log("[FileSystemAgent] Added file:", relativePath);
-        }
+      } catch (error) {
+        console.error(`Error reading directory ${dirPath}:`, error);
       }
     };
 
     await getFiles(this.workspaceRoot);
-    console.log("[FileSystemAgent] Total files found:", files.length);
     return files;
+  }
+
+  private shouldIgnoreFile(name: string): boolean {
+    const ignoreDirs = ['node_modules', '.git', 'build', 'dist', 'out'];
+    return ignoreDirs.includes(name);
   }
 
   async getFileContent(filePath: string): Promise<string> {
@@ -57,11 +85,51 @@ export class FileSystemAgent {
     const fullPath = path.join(this.workspaceRoot, filePath);
     const fileUri = vscode.Uri.file(fullPath);
 
+    // Verificar caché
+    const cached = this.fileCache.get(fullPath);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.content;
+    }
+
     try {
+      const stat = await vscode.workspace.fs.stat(fileUri);
+      
+      // Si el archivo es muy grande, leer solo una parte
+      if (stat.size > this.MAX_FILE_SIZE) {
+        const partialContent = await this.readPartialFile(fileUri, this.MAX_FILE_SIZE);
+        this.fileCache.set(fullPath, {
+          content: partialContent,
+          timestamp: Date.now(),
+        });
+        return partialContent;
+      }
+
       const fileContent = await vscode.workspace.fs.readFile(fileUri);
-      return Buffer.from(fileContent).toString("utf8");
+      const content = Buffer.from(fileContent).toString("utf8");
+      
+      // Guardar en caché
+      this.fileCache.set(fullPath, {
+        content,
+        timestamp: Date.now(),
+      });
+      
+      return content;
     } catch (error) {
       console.error(`Error reading file ${filePath}:`, error);
+      return "";
+    }
+  }
+
+  private async readPartialFile(
+    fileUri: vscode.Uri,
+    maxSize: number
+  ): Promise<string> {
+    try {
+      const fileContent = await vscode.workspace.fs.readFile(fileUri);
+      const content = Buffer.from(fileContent.slice(0, maxSize)).toString("utf8");
+      return `${content}\n... (File truncated due to size)`;
+    } catch (error) {
+      console.error(`Error reading partial file:`, error);
       return "";
     }
   }
@@ -78,9 +146,7 @@ export class FileSystemAgent {
       const filesContent = await Promise.all(
         selectedFiles.map(async (file) => {
           const content = await this.getFileContent(file);
-          // Escapar los backticks en el contenido
           const escapedContent = content.replace(/`/g, '\\`');
-          // Obtener la extensión del archivo
           const ext = path.extname(file).slice(1);
           return `File: ${file}\n\`\`\`${ext}\n${escapedContent}\n\`\`\`\n`;
         })
@@ -91,5 +157,12 @@ export class FileSystemAgent {
       console.error("Error preparing message with context:", error);
       return message;
     }
+  }
+
+  dispose() {
+    if (this.fileWatcher) {
+      this.fileWatcher.dispose();
+    }
+    this.fileCache.clear();
   }
 }

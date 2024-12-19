@@ -148,26 +148,26 @@ const ChatInput = () => {
 
   return (
     <div style={styles.container}>
-      <FileSelector
-        files={selectedFiles}
-        onRemove={handleFileRemove}
-        projectFiles={projectFiles}
-        onFileSelect={handleFileSelect}
+    <FileSelector
+      files={selectedFiles}
+      onRemove={handleFileRemove}
+      projectFiles={projectFiles}
+      onFileSelect={handleFileSelect}
+    />
+    <form onSubmit={handleSubmit} style={styles.form}>
+      <textarea
+        ref={textareaRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Type your message..."
+        style={styles.textarea}
       />
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          style={styles.textarea}
-        />
-        <button type="submit" style={styles.button} title="Send message">
-          <EnterIcon />
-        </button>
-      </form>
-    </div>
+      <button type="submit" style={styles.sendButton} title="Send message">
+        <EnterIcon />
+      </button>
+    </form>
+  </div>
   );
 };
 
