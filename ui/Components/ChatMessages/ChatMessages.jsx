@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, memo, useCallback } from "react";
 import { styles } from "./styles";
 import { UserMessage } from "./Message/UserMessage";
@@ -27,15 +28,9 @@ const ChatMessages = ({ children }) => {
   const lastMessageRef = useRef(null);
   const observerRef = useRef(null);
 
-  const handleEditMessage = (messageIndex, newText, attachedFiles) => {
-    const updatedMessages = [...messages];
-    updatedMessages[messageIndex] = {
-      ...updatedMessages[messageIndex],
-      text: newText,
-      attachedFiles: attachedFiles || []
-    };
+  const handleEditMessage = useCallback((messageIndex, newText, attachedFiles) => {
     handleSendMessage(newText, attachedFiles || []);
-  };
+  }, [handleSendMessage]);
 
   const handleScroll = useCallback((entries) => {
     const [entry] = entries;
@@ -71,19 +66,25 @@ const ChatMessages = ({ children }) => {
       
       {messages.map((message, index) => (
         <div
-          key={index}
+          key={message.tempId || index}
           ref={index === messages.length - 1 ? lastMessageRef : null}
         >
           <Message
             message={message}
             messageIndex={index}
-            onEdit={(newText, files) => handleEditMessage(index, newText, files)}
+            onEdit={handleEditMessage}
           />
         </div>
       ))}
       
       {isLoading && currentMessage && (
-        <Message message={{ text: currentMessage, isUser: false }} />
+        <Message 
+          message={{ 
+            text: currentMessage, 
+            isUser: false,
+            tempId: 'current-message'
+          }} 
+        />
       )}
       
       {messages.length === 0 && !isLoading && children}

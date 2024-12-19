@@ -8,7 +8,6 @@ import { FileSystemAgent } from "../agents/FileSystemAgent";
 import { MessageBroker } from "./MessageBroker";
 import { MessageType } from "../types/types";
 
-
 export class OllamaService {
   private _storage: ChatHistoryStorage;
   private _chatManager: ChatManager;
@@ -28,10 +27,11 @@ export class OllamaService {
   async sendToOllama(
     userMessage: string,
     selectedFiles: string[] = [],
-    view: vscode.WebviewView  | undefined
+    view: vscode.WebviewView | undefined
   ): Promise<void> {
     try {
       this._messageBroker.setView(view);
+
       const messageWithContext = await this._fileSystemAgent.prepareMessageWithContext(
         userMessage,
         selectedFiles
@@ -61,7 +61,7 @@ export class OllamaService {
       const conversationText = await this._chatManager.formatConversation();
       const response = await this._api.generateResponse(
         conversationText,
-        view
+       
       );
 
       if (response) {
@@ -74,14 +74,28 @@ export class OllamaService {
       }
     } catch (error) {
       console.error("Error in sendToOllama:", error);
-      this._messageBroker.sendError("Error al procesar el mensaje. Por favor, intente de nuevo.");
+      this._messageBroker.sendError(
+        "Error al procesar el mensaje. Por favor, intente de nuevo.",
+        "OLLAMA_SERVICE_ERROR",
+        error
+      );
     }
   }
 
   async loadChatHistory(): Promise<ChatHistory[]> {
-    const history = await this._storage.loadHistory();
-    this._messageBroker.sendHistoryLoaded(history);
-    return history;
+    try {
+      const history = await this._storage.loadHistory();
+      await this._messageBroker.sendHistoryLoaded(history);
+      return history;
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      await this._messageBroker.sendError(
+        "Error al cargar el historial",
+        "HISTORY_LOAD_ERROR",
+        error
+      );
+      return [];
+    }
   }
 
   async loadChat(chatId: string): Promise<boolean> {
@@ -90,15 +104,34 @@ export class OllamaService {
         fs.readFileSync(this._storage.getHistoryPath(), "utf-8")
       );
       const chat = chats.find((c: ChatHistory) => c.id === chatId);
+      
       if (chat) {
         this._chatManager.setCurrentChatId(chatId);
         await this._chatManager.setConversation(chat.messages);
         this._isHistoryChat = true;
+        
+        await this._messageBroker.sendChatLoaded(
+          chat.messages,
+          0, // currentPage
+          1, // totalPages
+          false // hasMore
+        );
+        
         return true;
       }
+      
+      await this._messageBroker.sendError(
+        "Chat no encontrado",
+        "CHAT_NOT_FOUND"
+      );
       return false;
     } catch (error) {
       console.error("Error loading chat:", error);
+      await this._messageBroker.sendError(
+        "Error al cargar el chat",
+        "CHAT_LOAD_ERROR",
+        error
+      );
       return false;
     }
   }
@@ -136,13 +169,10 @@ export class OllamaService {
     view: vscode.WebviewView  | undefined
   ): Promise<void> {
     try {
-      // Truncar la conversación hasta el mensaje editado
       await this._chatManager.truncateConversationAtIndex(messageIndex);
 
-      // Enviar el mensaje editado
       await this.sendToOllama(userMessage, selectedFiles, view);
 
-      // Guardar la conversación actualizada
       const currentMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),

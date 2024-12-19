@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 const styles = {
@@ -34,6 +34,9 @@ const styles = {
     backgroundColor: "var(--vscode-editor-background)",
     transition: "background-color 0.2s",
     userSelect: "none",
+    '&:hover': {
+      backgroundColor: "var(--vscode-list-hoverBackground)",
+    }
   },
   timestamp: {
     fontSize: "12px",
@@ -48,12 +51,23 @@ const styles = {
     borderRadius: "3px",
     cursor: "pointer",
     fontSize: "12px",
+    '&:hover': {
+      backgroundColor: "var(--vscode-button-hoverBackground)",
+    }
   },
   summary: {
     fontSize: "14px",
     color: "var(--vscode-foreground)",
     marginBottom: "4px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
+  noHistory: {
+    textAlign: "center",
+    padding: "20px",
+    color: "var(--vscode-descriptionForeground)",
+  }
 };
 
 const ChatHistory = () => {
@@ -61,47 +75,61 @@ const ChatHistory = () => {
     history, 
     handleLoadChat, 
     showHistory, 
-    setShowHistory 
+    setShowHistory,
+    isLoadingHistory 
   } = useAppContext();
 
   if (!showHistory) return null;
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowHistory(false);
-  };
+  }, [setShowHistory]);
 
-  const formatDate = (timestamp) => {
+  const formatDate = useCallback((timestamp) => {
     return new Date(timestamp).toLocaleString();
-  };
+  }, []);
 
-  const handleChatClick = (chatId) => {
+  const handleChatClick = useCallback((chatId) => {
     handleLoadChat(chatId);
-  };
+  }, [handleLoadChat]);
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <h2>Historial de Chats</h2>
-        <button style={styles.button} onClick={handleClose}>
+        <button 
+          style={styles.button} 
+          onClick={handleClose}
+          disabled={isLoadingHistory}
+        >
           Cerrar
         </button>
       </div>
       <div style={styles.list}>
-        {history.map((chat) => (
-          <div
-            key={chat.id}
-            style={styles.item}
-            onClick={() => handleChatClick(chat.id)}
-          >
-            <div style={styles.summary}>
-              {chat.summary || (chat.messages[0]?.content?.slice(0, 100) + "...") || "Chat sin título"}
-            </div>
-            <div style={styles.timestamp}>{formatDate(chat.timestamp)}</div>
+        {isLoadingHistory ? (
+          <div style={styles.noHistory}>
+            Cargando historial...
           </div>
-        ))}
-        {history.length === 0 && (
-          <div style={{ padding: "10px", textAlign: "center" }}>
-            No hay chats guardados
+        ) : history.length > 0 ? (
+          history.map((chat) => (
+            <div
+              key={chat.id}
+              style={styles.item}
+              onClick={() => handleChatClick(chat.id)}
+            >
+              <div style={styles.summary}>
+                {chat.summary || 
+                 (chat.messages[0]?.content?.slice(0, 100) + "...") || 
+                 "Chat sin título"}
+              </div>
+              <div style={styles.timestamp}>
+                {formatDate(chat.timestamp)}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={styles.noHistory}>
+            No hay chats en el historial
           </div>
         )}
       </div>

@@ -1,19 +1,14 @@
-import React, { memo, useState, useEffect, useRef } from "react";
+import React, { memo, useState, useEffect, useRef, useCallback } from "react";
 import { EnterIcon, WriteIcon, ChatIcon, FileIcon } from "./Icons";
 import { styles } from "./ChatInputStyles";
 import { useAppContext } from "../../context/AppContext";
 import { useTextareaResize } from "../../hooks/useTextareaResize";
 
+
 const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
-  
-  console.log("[FileSelector] Props received:", {
-    filesCount: files.length,
-    projectFilesCount: projectFiles?.length || 0,
-    isDropdownOpen
-  });
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -32,23 +27,20 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
     };
   }, [isDropdownOpen]);
 
-  const handleFileSelect = (file) => {
-    console.log("[FileSelector] File selected:", file);
+  const handleFileSelect = useCallback((file) => {
     onFileSelect(file);
     setSearchTerm("");
-  };
+    setIsDropdownOpen(false);
+  }, [onFileSelect]);
 
-  const toggleDropdown = () => {
-    console.log("[FileSelector] Toggling dropdown, current state:", !isDropdownOpen);
-    setIsDropdownOpen(!isDropdownOpen);
-    if (!isDropdownOpen) {
-      setSearchTerm("");
-    }
-  };
+  const toggleDropdown = useCallback(() => {
+    setIsDropdownOpen(prev => !prev);
+    setSearchTerm("");
+  }, []);
 
   const filteredFiles = projectFiles?.filter(file => 
     file.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   return (
     <div style={styles.filesWrapper} ref={dropdownRef}>
@@ -57,6 +49,7 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
           onClick={toggleDropdown}
           style={styles.addButton}
           title="Add file"
+          disabled={!projectFiles?.length}
         >
           <FileIcon />
         </button>
@@ -64,10 +57,7 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
           <div key={file} style={styles.fileTag}>
             <span>{file}</span>
             <button
-              onClick={() => {
-                console.log("[FileSelector] Removing file:", file);
-                onRemove(file);
-              }}
+              onClick={() => onRemove(file)}
               style={styles.removeButton}
               title="Remove file"
             >
@@ -86,10 +76,11 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search files..."
               style={styles.searchInput}
+              autoFocus
             />
           </div>
           <ul style={styles.fileList}>
-            {filteredFiles?.length > 0 ? (
+            {filteredFiles.length > 0 ? (
               filteredFiles.map((file) => (
                 <li
                   key={file}
@@ -100,7 +91,9 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
                 </li>
               ))
             ) : (
-              <li style={styles.noFiles}>No files available</li>
+              <li style={styles.noFiles}>
+                {searchTerm ? "No files found" : "No files available"}
+              </li>
             )}
           </ul>
         </div>
@@ -110,63 +103,69 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
 });
 
 const ChatInput = () => {
-  const {
-    input,
-    setInput,
-    handleSendMessage,
-    selectedFiles,
+  const { 
+    input, 
+    setInput, 
+    selectedFiles, 
     setSelectedFiles,
+    handleSendMessage,
+    isLoading,
     projectFiles
   } = useAppContext();
-  
+
   const textareaRef = useRef(null);
-  useTextareaResize(textareaRef);
+  const { textareaHeight } = useTextareaResize(textareaRef, input);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (input.trim() !== "" || selectedFiles.length > 0) {
-      handleSendMessage(input, selectedFiles);
+  const handleSubmit = useCallback((e) => {
+    e?.preventDefault();
+    if ((input.trim() || selectedFiles.length > 0) && !isLoading) {
+      handleSendMessage(input.trim(), selectedFiles);
     }
-  };
+  }, [input, selectedFiles, isLoading, handleSendMessage]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit();
     }
-  };
+  }, [handleSubmit]);
 
-  const handleFileSelect = (file) => {
+  const handleFileSelect = useCallback((file) => {
     if (!selectedFiles.includes(file)) {
       setSelectedFiles(prev => [...prev, file]);
     }
-  };
+  }, [selectedFiles, setSelectedFiles]);
 
-  const handleFileRemove = (file) => {
+  const handleFileRemove = useCallback((file) => {
     setSelectedFiles(prev => prev.filter(f => f !== file));
-  };
+  }, [setSelectedFiles]);
 
   return (
     <div style={styles.container}>
       <FileSelector
         files={selectedFiles}
         onRemove={handleFileRemove}
-        projectFiles={projectFiles}
         onFileSelect={handleFileSelect}
+        projectFiles={projectFiles}
       />
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <div style={styles.inputContainer}>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          style={styles.textarea}
+          style={{ ...styles.input, height: textareaHeight }}
+          placeholder="Escribe un mensaje..."
+          disabled={isLoading}
         />
-        <button type="submit" style={styles.button} title="Send message">
+        <button
+          onClick={handleSubmit}
+          style={styles.sendButton}
+          disabled={(!input.trim() && !selectedFiles.length) || isLoading}
+        >
           <EnterIcon />
         </button>
-      </form>
+      </div>
     </div>
   );
 };

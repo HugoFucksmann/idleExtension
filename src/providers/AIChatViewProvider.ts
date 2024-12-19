@@ -2,17 +2,48 @@ import * as vscode from "vscode";
 import { OllamaService } from "../services/OllamaService";
 import { getHtmlForWebview } from "../utils/webviewUtils";
 import { FileEditorAgent } from "../agents/FileEditorAgent";
+import { MessageBroker } from "../services/MessageBroker";
+import { MessageType } from "../types/types";
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "aiChat.chatView";
-  private _view?: vscode.WebviewView  | undefined;
+  private _view?: vscode.WebviewView;
   private _ollamaService: OllamaService;
+  private _messageBroker: MessageBroker;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
     context: vscode.ExtensionContext
   ) {
     this._ollamaService = new OllamaService(context);
+    this._messageBroker = MessageBroker.getInstance();
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    // Manejar mensajes enviados
+    this._messageBroker.subscribe(MessageType.SEND_MESSAGE, async (payload) => {
+      await this._ollamaService.sendToOllama(
+        payload.message,
+        payload.selectedFiles,
+        this._view
+      );
+    });
+
+    // Manejar carga de chat
+    this._messageBroker.subscribe(MessageType.LOAD_CHAT, async (payload) => {
+      await this._ollamaService.loadChat(payload.chatId);
+    });
+
+    // Manejar carga de historial
+    this._messageBroker.subscribe(MessageType.LOAD_HISTORY, async () => {
+      await this._ollamaService.loadChatHistory();
+    });
+
+    // Manejar limpieza de conversación
+    this._messageBroker.subscribe(MessageType.CLEAR_CONVERSATION, async () => {
+      this._ollamaService.clearConversation();
+    });
   }
 
   resolveWebviewView(
@@ -20,6 +51,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext
   ) {
     this._view = webviewView;
+    this._messageBroker.setView(webviewView);
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -37,114 +69,54 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async handleMessage(message: any) {
-    switch (message.type) {
-      case "sendMessage":
-        await this._ollamaService.sendToOllama(
-          message.message,
-          message.selectedFiles || [],
-          this._view
-        );
-        break;
-        case "loadMoreMessages":
-          await this.loadMoreMessages(message.page);
-          break;
-      case "editMessage":
-        await this._ollamaService.editAndResendMessage(
-          message.messageIndex,
-          message.message,
-          message.selectedFiles || [],
-          this._view
-        );
-        break;
-        case "clearConversation":
-          await this._ollamaService.clearConversation();
-          this._view?.webview.postMessage({ type: "conversationCleared" });
-          // Cargar el historial actualizado después de limpiar
-          await this.loadHistory();
-          break;
-      case "closePanel":
-        vscode.commands.executeCommand("workbench.action.closeSidebar");
-        break;
-      case "loadHistory":
-        await this.loadHistory();
-        break;
-      case "loadChat":
-        await this.loadChat(message.chatId);
-        break;
-      case "showHistory":
-        await this.loadHistory();
-        this._view?.webview.postMessage({ type: "showFullHistory" });
-        break;
-      case "getProjectFiles":
-        const files = await this._ollamaService.getProjectFiles();
-        this._view?.webview.postMessage({
-          type: "projectFiles",
-          files,
-        });
-        break;
-      case "applyChanges":
-        const fileEditor = new FileEditorAgent();
-        fileEditor.applyChanges(
-          message.payload.filename,
-          message.payload.content,
-          false // Por ahora asumimos que es un reemplazo completo
-        );
-        break;
-    }
-  }
-
-  private async loadHistory() {
-    const history = await this._ollamaService.loadChatHistory();
-    this._view?.webview.postMessage({
-      type: "historyLoaded",
-      history,
-    });
-  }
-
-  private async loadChat(chatId: string) {
     try {
-      const success = await this._ollamaService.loadChat(chatId);
-      if (success) {
-        const messagesResponse = await this._ollamaService.getCurrentMessages(0);
-        this._view?.webview.postMessage({
-          type: "chatLoaded",
-          messages: messagesResponse.messages,
-          currentPage: messagesResponse.currentPage,
-          totalPages: messagesResponse.totalPages,
-          hasMore: messagesResponse.hasMore
-        });
-      } else {
-        this._view?.webview.postMessage({
-          type: "error",
-          message: "No se pudo cargar el chat. Por favor, intente de nuevo.",
-        });
+      console.log('Received message in provider:', message); // Debug log
+
+      switch (message.type) {
+        case MessageType.SEND_MESSAGE:
+          await this._messageBroker.emit(MessageType.SEND_MESSAGE, {
+            message: message.message,
+            selectedFiles: message.selectedFiles || []
+          });
+          break;
+
+        case MessageType.LOAD_CHAT:
+          await this._messageBroker.emit(MessageType.LOAD_CHAT, {
+            chatId: message.chatId
+          });
+          break;
+
+        case MessageType.LOAD_HISTORY:
+          await this._messageBroker.emit(MessageType.LOAD_HISTORY, {});
+          break;
+
+        case MessageType.CLEAR_CONVERSATION:
+          await this._messageBroker.emit(MessageType.CLEAR_CONVERSATION, {});
+          break;
+
+        case "closePanel":
+          vscode.commands.executeCommand("workbench.action.closeSidebar");
+          break;
+
+        case "applyChanges":
+          const fileEditor = new FileEditorAgent();
+          await fileEditor.applyChanges(
+            message.payload.filename,
+            message.payload.content,
+            false
+          );
+          break;
+
+        default:
+          console.warn('Unknown message type:', message.type);
       }
     } catch (error) {
-      console.error("Error loading chat:", error);
-      this._view?.webview.postMessage({
-        type: "error",
-        message: "Error al cargar el chat. Por favor, intente de nuevo.",
-      });
-    }
-  }
-
-   // Nuevo método para manejar la carga de más mensajes
-   private async loadMoreMessages(page: number) {
-    try {
-      const messagesResponse = await this._ollamaService.getCurrentMessages(page);
-      this._view?.webview.postMessage({
-        type: "messagesLoaded",
-        messages: messagesResponse.messages,
-        currentPage: messagesResponse.currentPage,
-        totalPages: messagesResponse.totalPages,
-        hasMore: messagesResponse.hasMore
-      });
-    } catch (error) {
-      console.error("Error loading more messages:", error);
-      this._view?.webview.postMessage({
-        type: "error",
-        message: "Error al cargar más mensajes.",
-      });
+      console.error("Error handling message:", error);
+      await this._messageBroker.sendError(
+        "Error procesando el mensaje",
+        "MESSAGE_HANDLING_ERROR",
+        error
+      );
     }
   }
 }

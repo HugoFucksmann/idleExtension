@@ -1,13 +1,16 @@
 import * as vscode from "vscode";
 import { AppConfig } from "../config/AppConfig";
+import { MessageBroker } from "./MessageBroker";
 
 export class OllamaAPI {
   private _controller: AbortController | null = null;
+  private _messageBroker: MessageBroker;
 
-  async generateResponse(
-    prompt: string,
-    view: vscode.WebviewView  | undefined
-  ): Promise<string> {
+  constructor() {
+    this._messageBroker = MessageBroker.getInstance();
+  }
+
+  async generateResponse(prompt: string): Promise<string> {
     if (this._controller) {
       this._controller.abort();
     }
@@ -55,21 +58,27 @@ export class OllamaAPI {
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            
             currentChunk += data.response;
 
             if (currentChunk.length >= AppConfig.chat.chunkSize) {
               buffer += currentChunk;
-              if (view) {
-                view.webview.postMessage({
-                  type: "response",
-                  message: buffer,
-                  done: false,
-                });
-              }
+              await this._messageBroker.sendResponse(currentChunk, false);
               currentChunk = '';
             }
           } catch (error) {
             console.error("Error parsing JSON response:", error);
+            if (error instanceof Error) {
+              await this._messageBroker.sendError(
+                error.message,
+                "OLLAMA_RESPONSE_ERROR",
+                error
+              );
+            }
             continue;
           }
         }
@@ -77,13 +86,7 @@ export class OllamaAPI {
 
       if (currentChunk.length > 0) {
         buffer += currentChunk;
-        if (view) {
-          view.webview.postMessage({
-            type: "response",
-            message: buffer,
-            done: true,
-          });
-        }
+        await this._messageBroker.sendResponse(currentChunk, true);
       }
 
       return buffer;
@@ -91,32 +94,33 @@ export class OllamaAPI {
       if (error instanceof Error) {
         if (error.name === "AbortError") {
           console.log("Request aborted:", error.message);
+          await this._messageBroker.sendError(
+            "La solicitud fue cancelada",
+            "REQUEST_ABORTED",
+            error
+          );
           return "";
         }
         console.error("Error in generateResponse:", error);
-        throw error;
+        await this._messageBroker.sendError(
+          error.message,
+          "OLLAMA_API_ERROR",
+          error
+        );
+      } else {
+        await this._messageBroker.sendError(
+          "Error desconocido al generar respuesta",
+          "UNKNOWN_ERROR",
+          error
+        );
       }
       return "";
     } finally {
       clearTimeout(timeoutId);
-      this._controller = null;
-    }
-  }
-
-  private async retryWithBackoff<T>(
-    operation: () => Promise<T>,
-    maxRetries: number = 3,
-    baseDelay: number = 1000
-  ): Promise<T> {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await operation();
-      } catch (error) {
-        if (i === maxRetries - 1) throw error;
-        const delay = baseDelay * Math.pow(2, i);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      if (this._controller) {
+        this._controller.abort();
+        this._controller = null;
       }
     }
-    throw new Error("Max retries exceeded");
   }
 }

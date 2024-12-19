@@ -1,15 +1,17 @@
 import { Message } from "../types/types";
 import { IdGenerator } from "../utils/IdGenerator";
 import { AppConfig } from "../config/AppConfig";
+import { MessageBroker } from "./MessageBroker";
 
 export class ChatManager {
   private _conversationHistory: Message[] = [];
   private _currentChatId: string;
   private _lock: Promise<void> = Promise.resolve();
-  private readonly PAGE_SIZE = AppConfig.chat.pageSize;
+  private _messageBroker: MessageBroker;
 
   constructor() {
     this._currentChatId = IdGenerator.generate();
+    this._messageBroker = MessageBroker.getInstance();
   }
 
   private async withLock<T>(operation: () => Promise<T>): Promise<T> {
@@ -43,28 +45,6 @@ export class ChatManager {
     });
   }
 
-  async clearMessages(): Promise<void> {
-    await this.withLock(async () => {
-      this._conversationHistory = [];
-    });
-  }
-
-  async clearConversation(): Promise<void> {
-    await this.withLock(async () => {
-      this._conversationHistory = [];
-      this._currentChatId = IdGenerator.generate();
-    });
-  }
-
-  async setConversation(messages: Message[]): Promise<void> {
-    await this.withLock(async () => {
-      this._conversationHistory = messages.map(msg => ({
-        ...msg,
-        tempId: IdGenerator.generate()
-      }));
-    });
-  }
-
   async getCurrentMessages(page: number = 0): Promise<{
     messages: Message[];
     totalPages: number;
@@ -80,12 +60,51 @@ export class ChatManager {
       
       const pageMessages = this._conversationHistory.slice(start, end);
       
-      return {
+      const result = {
         messages: pageMessages,
         totalPages,
         currentPage: page,
         hasMore: start > 0
       };
+
+      await this._messageBroker.sendMessagesLoaded(
+        pageMessages,
+        totalPages,
+        page,
+        start > 0
+      );
+
+      return result;
+    });
+  }
+
+  async clearMessages(): Promise<void> {
+    await this.withLock(async () => {
+      this._conversationHistory = [];
+      await this._messageBroker.sendConversationCleared();
+    });
+  }
+
+  async clearConversation(): Promise<void> {
+    await this.withLock(async () => {
+      this._conversationHistory = [];
+      this._currentChatId = IdGenerator.generate();
+      await this._messageBroker.sendConversationCleared();
+    });
+  }
+
+  async setConversation(messages: Message[]): Promise<void> {
+    await this.withLock(async () => {
+      this._conversationHistory = messages.map(msg => ({
+        ...msg,
+        tempId: IdGenerator.generate()
+      }));
+      await this._messageBroker.sendChatLoaded(
+        this._conversationHistory,
+        0,
+        Math.ceil(this._conversationHistory.length / AppConfig.chat.pageSize),
+        this._conversationHistory.length > AppConfig.chat.pageSize
+      );
     });
   }
 
@@ -104,19 +123,10 @@ export class ChatManager {
   }
 
   async formatConversation(): Promise<string> {
-    return await this.withLock(async () => {
-      return this._conversationHistory
-        .map((msg) => {
-          const escapedContent = msg.content
-            .replace(/\\/g, '\\\\')
-            .replace(/`/g, '\\`')
-            .replace(/\$/g, '\\$')
-            .replace(/"/g, '\\"');
-          
-          return `${msg.role}: ${escapedContent}`;
-        })
-        .join("\n\n");
-    });
+    const messages = await this.getAllMessages();
+    return messages
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n\n");
   }
 
   async truncateConversationAtIndex(index: number): Promise<void> {
