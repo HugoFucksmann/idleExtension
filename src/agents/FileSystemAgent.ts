@@ -70,25 +70,26 @@ export class FileSystemAgent {
     message: string,
     selectedFiles: string[] = []
   ): Promise<string> {
-    // Si no hay archivos seleccionados, retornar el mensaje original
     if (!selectedFiles.length) {
       return message;
     }
 
     try {
-      // Obtener el contenido de los archivos seleccionados
       const filesContent = await Promise.all(
         selectedFiles.map(async (file) => {
           const content = await this.getFileContent(file);
-          return `File: ${file}\n\`\`\`\n${content}\n\`\`\`\n`;
+          // Escapar los backticks en el contenido
+          const escapedContent = content.replace(/`/g, '\\`');
+          // Obtener la extensión del archivo
+          const ext = path.extname(file).slice(1);
+          return `File: ${file}\n\`\`\`${ext}\n${escapedContent}\n\`\`\`\n`;
         })
       );
 
-      // Combinar el mensaje del usuario con el contenido de los archivos
       return `${message}\n\nContext Files:\n${filesContent.join("\n")}`;
     } catch (error) {
       console.error("Error preparing message with context:", error);
-      return message; // En caso de error, retornar el mensaje original
+      return message;
     }
   }
 }

@@ -114,18 +114,5 @@ Estos tipos son fundamentales y se utilizan en:
 - **Control de Errores**: Sistema integral de manejo de errores
 - **Arquitectura Modular**: Diseño altamente mantenible y extensible
 
-## Consideraciones de Mejora
 
-1. Sistema de caché para optimizar cargas
-2. Soporte para múltiples modelos de IA
-3. Sistema de configuración más robusto
-4. Mejoras en la gestión de memoria para conversaciones largas
-5. sistema de agentes entre el usuario y el modelo:
-   /services
-   /agents
-   - fileAgent.js (agente de gestion de archivos)
-   - codeAgent.js (agente de gestion de codigo)
-   - searchAgent.js (agente de busqueda de informacion en archivos)
-   - agentManager.js (coordinador de los agentes)
-   - agentContext.js (contexto de los agentes)
 

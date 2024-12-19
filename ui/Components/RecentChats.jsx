@@ -57,11 +57,20 @@ const RecentChats = ({ history, onChatSelect }) => {
     return date.toLocaleString();
   };
 
+  // Obtener los 4 chats más recientes
+  const recentChats = [...history]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 4);
+
+  if (recentChats.length === 0) {
+    return null;
+  }
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Recent Chats</h2>
       <div style={styles.chatGrid}>
-        {history.map((chat) => (
+        {recentChats.map((chat) => (
           <div
             key={chat.id}
             style={styles.chatItem}
@@ -73,7 +82,7 @@ const RecentChats = ({ history, onChatSelect }) => {
               {formatTimestamp(chat.timestamp)}
             </div>
             <div style={styles.summary}>
-              {chat.summary || chat.messages[0]?.content || "Empty chat"}
+              {chat.summary || (chat.messages[0]?.content?.slice(0, 100) + "...") || "Empty chat"}
             </div>
           </div>
         ))}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const styles = {
   container: {
@@ -31,9 +31,11 @@ const styles = {
     cursor: "pointer",
     border: "1px solid var(--vscode-input-border)",
     backgroundColor: "var(--vscode-editor-background)",
-    "&:hover": {
-      backgroundColor: "var(--vscode-list-hoverBackground)",
-    },
+    transition: "background-color 0.2s",
+    userSelect: "none",
+  },
+  chatItemHover: {
+    backgroundColor: "var(--vscode-list-hoverBackground)",
   },
   timestamp: {
     fontSize: "12px",
@@ -49,15 +51,28 @@ const styles = {
     cursor: "pointer",
     fontSize: "12px",
   },
+  summary: {
+    fontSize: "14px",
+    color: "var(--vscode-foreground)",
+    marginBottom: "4px",
+  },
 };
 
 function ChatHistory({ history, onChatSelect, setShowHistory }) {
+  const [hoveredId, setHoveredId] = useState(null);
+
   const handleClose = () => {
     setShowHistory(false);
   };
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
+  };
+
+  const handleChatClick = (chatId) => {
+    if (onChatSelect) {
+      onChatSelect(chatId);
+    }
   };
 
   return (
@@ -72,10 +87,19 @@ function ChatHistory({ history, onChatSelect, setShowHistory }) {
         {history.map((chat) => (
           <div
             key={chat.id}
-            style={styles.chatItem}
-            onClick={() => onChatSelect(chat.id)}
+            style={{
+              ...styles.chatItem,
+              ...(hoveredId === chat.id ? styles.chatItemHover : {}),
+            }}
+            onClick={() => handleChatClick(chat.id)}
+            onMouseEnter={() => setHoveredId(chat.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            role="button"
+            tabIndex={0}
           >
-            <div>{chat.summary}</div>
+            <div style={styles.summary}>
+              {chat.summary || (chat.messages[0]?.content?.slice(0, 100) + "...") || "Chat sin título"}
+            </div>
             <div style={styles.timestamp}>{formatDate(chat.timestamp)}</div>
           </div>
         ))}

@@ -29,17 +29,21 @@ function Chat() {
     setMessages,
     currentMessage,
     isLoading,
+    isLoadingHistory,
+    setIsLoadingHistory,
     handleResponseMessage,
     handleErrorMessage,
     clearChat,
     vscode,
-    handleSendMessage
+    handleSendMessage,
+    handleLoadChat
   } = useAppContext();
   
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [isNewChat, setIsNewChat] = useState(true);
   const [projectFiles, setProjectFiles] = useState([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     console.log("[Webview] Initializing projectFiles state");
@@ -91,6 +95,40 @@ function Chat() {
     handleSendMessage(newText, attachedFiles || []);
   };
 
+  // Cargar historial inicial
+  useEffect(() => {
+    if (!isInitialized && !isLoadingHistory) {
+      setIsInitialized(true);
+      setIsLoadingHistory(true);
+      vscode.postMessage({ type: "loadHistory" });
+    }
+  }, [isInitialized, isLoadingHistory]);
+
+  const handleChatSelect = (chatId) => {
+    if (!isLoadingHistory) {
+      setIsLoadingHistory(true);
+      setShowHistory(false); // Cerrar el historial inmediatamente
+      vscode.postMessage({
+        type: "loadChat",
+        chatId: chatId,
+      });
+    }
+  };
+
+  const handleNewChat = () => {
+    if (!isLoadingHistory) {
+      vscode.postMessage({ type: "clearConversation" });
+    }
+  };
+
+  const handleShowHistory = () => {
+    if (!isLoadingHistory) {
+      setShowHistory(true);
+      setIsLoadingHistory(true);
+      vscode.postMessage({ type: "loadHistory" });
+    }
+  };
+
   useEffect(() => {
     const handleMessage = (event) => {
       const message = event.data;
@@ -104,73 +142,71 @@ function Chat() {
         case "conversationCleared":
           clearChat();
           setIsNewChat(true);
-          vscode.postMessage({ type: "loadHistory" });
+          if (!isLoadingHistory) {
+            setIsLoadingHistory(true);
+            vscode.postMessage({ type: "loadHistory" });
+          }
           break;
         case "chatLoaded":
-          setMessages(message.messages.map(transformMessage));
-          setShowHistory(false);
+          if (message.messages && Array.isArray(message.messages)) {
+            const transformedMessages = message.messages.map(transformMessage);
+            setMessages(transformedMessages);
+            setIsLoadingHistory(false);
+            setIsNewChat(false);
+          } else {
+            console.error("Invalid messages format:", message);
+            setIsLoadingHistory(false);
+          }
           break;
         case "historyLoaded":
-          setHistory(message.history);
+          if (message.history && Array.isArray(message.history)) {
+            setHistory(message.history);
+          } else {
+            setHistory([]);
+          }
+          setIsLoadingHistory(false);
           break;
         case "showHistory":
           setShowHistory(true);
-          break;
-        case "showFullHistory":
-          setShowHistory(true);
-          vscode.postMessage({ type: "loadHistory" });
           break;
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleResponseMessage, handleErrorMessage, clearChat, vscode]);
-
-  const handleChatSelect = (chatId) => {
-    vscode.postMessage({
-      type: "loadChat",
-      chatId: chatId,
-    });
-  };
-
-  // Cargar historial inicial
-  useEffect(() => {
-    if (messages.length === 0) {
-      vscode.postMessage({ type: "loadHistory" });
-    }
-  }, [messages.length, vscode]);
+  }, [handleResponseMessage, handleErrorMessage, clearChat, vscode, isLoadingHistory]);
 
   return (
     <div style={styles.container}>
-      <Header setShowHistory={setShowHistory} />
-      <div style={styles.content}>
-        {showHistory ? (
-          <ChatHistory
-            history={history}
-            onChatSelect={handleChatSelect}
-            setShowHistory={setShowHistory}
-          />
-        ) : (
+      <Header
+        onNewChat={handleNewChat}
+        onShowHistory={handleShowHistory}
+        isNewChat={isNewChat}
+      />
+      {showHistory ? (
+        <ChatHistory
+          history={history}
+          onChatSelect={handleChatSelect}
+          setShowHistory={setShowHistory}
+        />
+      ) : (
+        <div style={styles.content}>
           <ChatMessages
             messages={messages}
-            currentMessage={currentMessage}
             isLoading={isLoading}
+            currentMessage={currentMessage}
             onEditMessage={handleEditMessage}
           >
-            {messages.length === 0 && (
-              <RecentChats
-                history={history.slice(0, 4)}
-                onChatSelect={handleChatSelect}
-              />
+            {messages.length === 0 && !isLoading && history.length > 0 && (
+              <RecentChats history={history} onChatSelect={handleChatSelect} />
             )}
           </ChatMessages>
-        )}
-        <ChatInput
-          projectFiles={projectFiles}
-          isNewChat={isNewChat}
-        />
-      </div>
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            projectFiles={projectFiles}
+          />
+        </div>
+      )}
     </div>
   );
 }

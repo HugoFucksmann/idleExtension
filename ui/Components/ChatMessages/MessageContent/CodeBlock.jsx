@@ -1,6 +1,6 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo, useState, useEffect, useMemo } from "react";
 import Prism from "prismjs";
-import "prismjs/themes/prism-tomorrow.css"; // Tema oscuro moderno
+import "prismjs/themes/prism-tomorrow.css";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-typescript";
@@ -8,6 +8,7 @@ import "prismjs/components/prism-python";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-css";
 import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-markup"; 
 import { styles } from "../styles";
 import { useAppContext } from "../../../context/AppContext";
 import { IconApply, IconCopy, IconTick } from "../../../IconstApp";
@@ -23,7 +24,9 @@ const PrismConfig = memo(() => {
       python: Prism.languages.python,
       json: Prism.languages.json,
       css: Prism.languages.css,
-      markdown: Prism.languages.markdown
+      markdown: Prism.languages.markdown,
+      html: Prism.languages.markup, 
+      htm: Prism.languages.markup,  
     };
   }, []);
 
@@ -39,6 +42,7 @@ const CodeBlockHeader = memo(({ filename, onCopy, onApply }) => {
     
     await action();
     setState(prev => ({
+
       [action === onCopy ? "copied" : "applied"]: true,
       timer: setTimeout(() => {
         setState(prev => ({ [action === onCopy ? "copied" : "applied"]: false, timer: null }));
@@ -73,12 +77,40 @@ const CodeBlock = ({ language = "javascript", content, filename }) => {
   const { vscode } = useAppContext();
   const [copied, setCopied] = useState(false);
 
+  // Normalizar el lenguaje
+  const normalizedLanguage = useMemo(() => {
+    const lang = language?.toLowerCase() || "javascript";
+    // Mapear extensiones comunes a sus lenguajes correspondientes
+    const languageMap = {
+      'html': 'markup',
+      'htm': 'markup',
+      'xml': 'markup',
+      'svg': 'markup',
+    };
+    return languageMap[lang] || lang;
+  }, [language]);
+  
+  // Sanitizar el contenido si es necesario
+  const sanitizedContent = useMemo(() => {
+    if (!content) return "";
+    // Escapar caracteres especiales si el contenido es HTML/markup
+    if (['markup', 'html', 'htm', 'xml'].includes(normalizedLanguage)) {
+      return content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    return content;
+  }, [content, normalizedLanguage]);
+
   useEffect(() => {
+    // Asegurarse de que el lenguaje esté soportado
+    if (!Prism.languages[normalizedLanguage]) {
+      console.warn(`Language ${normalizedLanguage} not supported, falling back to text`);
+    }
     Prism.highlightAll();
-  }, [content, language]);
+  }, [sanitizedContent, normalizedLanguage]);
 
   const handleCopy = async () => {
     try {
+      // Copiar el contenido original, no el sanitizado
       await navigator.clipboard.writeText(content);
       return true;
     } catch (err) {
@@ -102,7 +134,7 @@ const CodeBlock = ({ language = "javascript", content, filename }) => {
   };
 
   // No renderizar si no hay contenido
-  if (!content?.trim()) return null;
+  if (!sanitizedContent?.trim()) return null;
 
   return (
     <div style={styles.codeBlockContainer}>
@@ -120,14 +152,16 @@ const CodeBlock = ({ language = "javascript", content, filename }) => {
         borderRadius: '0 0 4px 4px',
         overflow: 'auto',
       }}>
-        <code className={`language-${language}`} style={{
-          fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
-          fontSize: '14px',
-          lineHeight: '1.5',
-          tabSize: 2,
-        }}>
-          {content}
-        </code>
+        <code 
+          className={`language-${normalizedLanguage}`} 
+          style={{
+            fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            tabSize: 2,
+          }}
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        />
       </pre>
     </div>
   );

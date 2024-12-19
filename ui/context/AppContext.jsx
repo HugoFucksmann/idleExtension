@@ -14,9 +14,11 @@ export const AppProvider = ({ children, vscode }) => {
   const [input, setInput] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [mode, setMode] = useState("chat");
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
+  const [chatId, setChatId] = useState(null);
 
   const handleSendMessage = async (message, files) => {
     if ((message.trim() !== "" || files.length > 0) && !isLoading) {
@@ -43,19 +45,24 @@ export const AppProvider = ({ children, vscode }) => {
     }
   };
 
+  const handleLoadChat = (chatId) => {
+    setIsLoadingHistory(true);
+    vscode.postMessage({
+      type: "loadChat",
+      chatId: chatId,
+    });
+  };
+
   const handleResponseMessage = (message) => {
     if (!message.done) {
-      setCurrentMessage(prev => prev + message.message);
+      setCurrentMessage(message.message);
     } else {
-      setCurrentMessage(prev => {
-        const finalMessage = prev + message.message;
-        setMessages(prevMessages => [
-          ...prevMessages,
-          { text: finalMessage, isUser: false }
-        ]);
-        setIsLoading(false);
-        return "";
-      });
+      setMessages(prevMessages => [
+        ...prevMessages,
+        { text: message.message, isUser: false }
+      ]);
+      setIsLoading(false);
+      setCurrentMessage("");
     }
   };
 
@@ -103,6 +110,7 @@ export const AppProvider = ({ children, vscode }) => {
           break;
         case "chatLoaded":
           setMessages(message.messages);
+          setIsLoadingHistory(false);
           break;
         case "conversationCleared":
           clearChat();
@@ -119,18 +127,26 @@ export const AppProvider = ({ children, vscode }) => {
     input,
     setInput,
     selectedFiles,
+    setSelectedFiles,
     isLoading,
+    isLoadingHistory,
+    setIsLoadingHistory,
+    mode,
+    setMode,
     messages,
     setMessages,
     currentMessage,
-    mode,
     handleSendMessage,
     handleResponseMessage,
     handleErrorMessage,
     handleFileSelect,
-    handleRemoveFile,
-    handleModeChange,
-    clearChat
+    handleLoadChat,
+    clearChat: () => {
+      setMessages([]);
+      setCurrentMessage("");
+      setInput("");
+      setSelectedFiles([]);
+    },
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

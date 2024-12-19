@@ -35,7 +35,16 @@ export class ChatManager {
 
   formatConversation(): string {
     return this._conversationHistory
-      .map((msg) => `${msg.role}: ${msg.content}`)
+      .map((msg) => {
+        // Escapar caracteres especiales en el contenido
+        const escapedContent = msg.content
+          .replace(/\\/g, '\\\\')  // Escapar backslashes primero
+          .replace(/`/g, '\\`')    // Escapar backticks
+          .replace(/\$/g, '\\$')   // Escapar símbolos de dólar
+          .replace(/"/g, '\\"');   // Escapar comillas dobles
+        
+        return `${msg.role}: ${escapedContent}`;
+      })
       .join("\n\n");
   }
 

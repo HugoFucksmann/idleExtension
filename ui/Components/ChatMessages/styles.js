@@ -76,14 +76,14 @@ export const styles = {
     fontSize: '14px',
     lineHeight: '1.5',
     color: 'var(--vscode-foreground)',
-    '&::-webkit-scrollbar': {
+    '&::WebkitScrollbar': {
       width: '8px',
       height: '8px',
     },
-    '&::-webkit-scrollbar-track': {
+    '&::WebkitScrollbarTrack': {
       background: 'transparent',
     },
-    '&::-webkit-scrollbar-thumb': {
+    '&::WebkitScrollbarThumb': {
       background: 'var(--vscode-scrollbarSlider-background)',
       borderRadius: '4px',
       '&:hover': {

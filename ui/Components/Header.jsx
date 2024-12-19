@@ -32,11 +32,13 @@ const styles = {
   },
 };
 
-function Header({ setShowHistory }) {
+function Header({ onNewChat, onShowHistory, isNewChat }) {
   const { vscode } = useAppContext();
 
   const handleNewChat = () => {
-    vscode.postMessage({ type: "clearConversation" });
+    if (onNewChat) {
+      onNewChat();
+    }
   };
 
   const handleClose = () => {
@@ -44,36 +46,36 @@ function Header({ setShowHistory }) {
   };
 
   const handleHistory = () => {
-    setShowHistory(true);
-    vscode.postMessage({ type: "loadHistory" });
+    if (onShowHistory) {
+      onShowHistory();
+    }
   };
 
   return (
     <div style={styles.header}>
-      <span>AI Chat (qwen2.5-coder:7b)</span>
       <div style={styles.buttonsContainer}>
         <button
-          onClick={handleHistory}
           style={styles.button}
-          title="Ver historial completo"
+          onClick={handleHistory}
+          title="Ver historial"
         >
           <HistoryIcon />
         </button>
         <button
-          onClick={handleNewChat}
           style={styles.button}
+          onClick={handleNewChat}
           title="Nuevo chat"
         >
           <NewChatIcon />
         </button>
-        <button
-          onClick={handleClose}
-          style={{...styles.button, ...styles.closeButton}}
-          title="Cerrar panel"
-        >
-          <CloseIcon />
-        </button>
       </div>
+      <button
+        style={{ ...styles.button, ...styles.closeButton }}
+        onClick={handleClose}
+        title="Cerrar"
+      >
+        <CloseIcon />
+      </button>
     </div>
   );
 }

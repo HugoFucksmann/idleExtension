@@ -1,7 +1,4 @@
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
-import { Message } from '../types/chatTypes';
 export class OllamaAPI {
   private _controller: AbortController | null = null;
 
@@ -25,6 +22,12 @@ export class OllamaAPI {
           model: "qwen2.5-coder:7b",
           prompt,
           stream: true,
+        }, (key, value) => {
+          // Asegurar que los valores string estén correctamente escapados
+          if (typeof value === 'string') {
+            return value.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+          }
+          return value;
         }),
         signal,
       });
@@ -43,50 +46,32 @@ export class OllamaAPI {
         const lines = chunk.split("\n").filter((line) => line.trim());
 
         for (const line of lines) {
-          const data = JSON.parse(line);
-          buffer += data.response;
+          try {
+            const data = JSON.parse(line);
+            buffer += data.response;
 
-          if (view) {
-            view.webview.postMessage({
-              type: "response",
-              message: data.response,
-              done: data.done,
-            });
+            if (view) {
+              view.webview.postMessage({
+                type: "response",
+                message: buffer,
+                done: data.done,
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing JSON response:", error);
+            continue;
           }
         }
       }
 
       return buffer;
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        if (view) {
-         /*  view.webview.postMessage({
-            type: "error",
-            message: "Error connecting to Ollama. Please make sure it's running.",
-          }); */
-           const defaultResponse = await this.readDefaultResponse();
-      const systemMessage: Message = {
-        role: "assistant",
-        content: defaultResponse
-      };
-      view.webview.postMessage({
-        type: "response",
-        message: systemMessage.content,
-        done: true
-      });
-      return systemMessage.content;
-    
-        }
-        return "";
+      if (error instanceof Error && error.name !== "AbortError") {
+        throw error;
       }
       return "";
     } finally {
       this._controller = null;
     }
-  }
-
-  private async readDefaultResponse(): Promise<string> {
-    const filePath = path.join(__dirname, "..", "respuestaEjemplo.txt");
-    return fs.promises.readFile(filePath, "utf8");
   }
 }
