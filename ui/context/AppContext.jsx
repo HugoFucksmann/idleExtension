@@ -41,6 +41,9 @@ export const AppProvider = ({ children, vscode }) => {
  
   const [showHistory, setShowHistory] = useState(false);
   const [projectFiles, setProjectFiles] = useState([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const transformMessage = useCallback((message) => {
     if (message.role) {
@@ -77,6 +80,33 @@ export const AppProvider = ({ children, vscode }) => {
       setSelectedFiles([]);
     }
   }, [loadingState.isLoading, mode, vscode]);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (isLoadingMore || currentPage >= totalPages - 1) return;
+    
+    setIsLoadingMore(true);
+    try {
+      vscode.postMessage({
+        type: "loadMoreMessages",
+        page: currentPage + 1
+      });
+    } catch (error) {
+      console.error("Error loading more messages:", error);
+    }
+  }, [currentPage, totalPages, isLoadingMore, vscode]);
+
+  const handleMessagesLoaded = useCallback((response) => {
+    const { messages: newMessages, totalPages: total, currentPage: page } = response;
+    setMessages(prev => {
+      // Eliminar duplicados basados en índice temporal
+      const combined = [...prev, ...newMessages.map(transformMessage)];
+      const unique = Array.from(new Map(combined.map(m => [m.tempId, m])).values());
+      return unique;
+    });
+    setTotalPages(total);
+    setCurrentPage(page);
+    setIsLoadingMore(false);
+  }, [transformMessage]);
 
   const handleLoadChat = useCallback((chatId) => {
     if (!loadingState.isLoadingHistory) {
@@ -167,6 +197,9 @@ export const AppProvider = ({ children, vscode }) => {
       
           }
           break;
+          case "messagesLoaded":
+            handleMessagesLoaded(message);
+            break;
         case "historyLoaded":
           if (message.history && Array.isArray(message.history)) {
             setHistory(message.history);
@@ -191,7 +224,7 @@ export const AppProvider = ({ children, vscode }) => {
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleResponseMessage, handleErrorMessage, transformMessage]);
+  }, [handleResponseMessage, handleErrorMessage, transformMessage,handleMessagesLoaded]);
 
   // Initialize on mount
   useEffect(() => {
@@ -225,10 +258,12 @@ export const AppProvider = ({ children, vscode }) => {
     clearChat,
     history,
     setHistory,
-
     showHistory,
     setShowHistory,
-    projectFiles
+    projectFiles,
+    loadMoreMessages,
+    isLoadingMore,
+    hasMoreMessages: currentPage < totalPages - 1
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

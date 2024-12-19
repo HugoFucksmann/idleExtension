@@ -12,18 +12,15 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     height: "100vh",
-    width: "100%",  // Cambiado de "100vw" a "100%"
     color: "var(--vscode-foreground)",
     backgroundColor: "var(--vscode-sideBar-background)",
     overflow: "hidden",
-    margin: 0,
-    boxSizing: "border-box",  // Añadido
   },
   content: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflow: "auto",
+    overflow: "hidden",
   }
 };
 
@@ -37,12 +34,10 @@ function Chat() {
         <ChatMessages>
           <RecentChats />
         </ChatMessages>
-     
+       
       </div>
-      
       <ChatInput />
     </div>
-  
   );
 }
 

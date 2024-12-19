@@ -37,7 +37,12 @@ export class ChatManager {
 
   async addMessage(message: Message): Promise<void> {
     await this.withLock(async () => {
-      this._conversationHistory.push(message);
+      // Asignar un ID temporal único al mensaje
+      const tempMessage = {
+        ...message,
+        tempId: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      };
+      this._conversationHistory.push(tempMessage);
     });
   }
 
@@ -56,7 +61,11 @@ export class ChatManager {
 
   async setConversation(messages: Message[]): Promise<void> {
     await this.withLock(async () => {
-      this._conversationHistory = messages;
+      // Asignar IDs temporales a los mensajes existentes
+      this._conversationHistory = messages.map(msg => ({
+        ...msg,
+        tempId: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      }));
     });
   }
 
@@ -64,16 +73,24 @@ export class ChatManager {
     messages: Message[];
     totalPages: number;
     currentPage: number;
+    hasMore: boolean;
   }> {
     return await this.withLock(async () => {
-      const start = page * this.PAGE_SIZE;
-      const end = start + this.PAGE_SIZE;
-      const totalPages = Math.ceil(this._conversationHistory.length / this.PAGE_SIZE);
+      const totalMessages = this._conversationHistory.length;
+      const totalPages = Math.ceil(totalMessages / this.PAGE_SIZE);
+      
+      // Calcular índices para la paginación desde el final
+      const end = totalMessages - (page * this.PAGE_SIZE);
+      const start = Math.max(end - this.PAGE_SIZE, 0);
+      
+      // Obtener los mensajes en el orden correcto
+      const pageMessages = this._conversationHistory.slice(start, end);
       
       return {
-        messages: this._conversationHistory.slice(start, end),
+        messages: pageMessages,
         totalPages,
         currentPage: page,
+        hasMore: start > 0
       };
     });
   }
@@ -116,13 +133,19 @@ export class ChatManager {
 
   async editMessage(index: number, newMessage: Message): Promise<void> {
     await this.withLock(async () => {
-      await this.truncateConversationAtIndex(index);
-      await this.addMessage(newMessage);
+      if (index >= 0 && index < this._conversationHistory.length) {
+        // Mantener el tempId si existe
+        const tempId = this._conversationHistory[index].tempId;
+        this._conversationHistory[index] = {
+          ...newMessage,
+          tempId: tempId || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        };
+      }
     });
   }
 
-  async getMessageCount(): Promise<number> {
-    return await this.withLock(async () => {
+  getMessageCount(): Promise<number> {
+    return this.withLock(async () => {
       return this._conversationHistory.length;
     });
   }

@@ -33,8 +33,9 @@ export class OllamaService {
         );
 
       // Si es una conversación nueva (sin mensajes), guardar inmediatamente
-      const currentMessages = await this._chatManager.getAllMessages();
-      const isNewConversation = currentMessages.length === 0;
+      const currentMessagesResponse = await this._chatManager.getCurrentMessages();
+      const isNewConversation = currentMessagesResponse.messages.length === 0;
+      
       if (isNewConversation && !this._isHistoryChat) {
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
@@ -49,14 +50,15 @@ export class OllamaService {
       });
 
       // Guardar después del mensaje del usuario
-      const updatedMessages = await this._chatManager.getAllMessages();
+      const currentMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
-        updatedMessages
+        currentMessages
       );
 
+      const conversationText = await this._chatManager.formatConversation();
       const response = await this._api.generateResponse(
-        await this._chatManager.formatConversation(),
+        conversationText,
         view
       );
 
@@ -64,10 +66,10 @@ export class OllamaService {
         // Agregar respuesta del asistente
         await this._chatManager.addMessage({ role: "assistant", content: response });
         // Guardar después de la respuesta del asistente
-        const finalMessages = await this._chatManager.getAllMessages();
+        const updatedMessages = await this._chatManager.getAllMessages();
         await this._storage.saveChat(
           this._chatManager.getCurrentChatId(),
-          finalMessages
+          updatedMessages
         );
       }
     } catch (error) {
@@ -105,18 +107,14 @@ export class OllamaService {
   }
 
   async clearConversation(): Promise<void> {
-    // Si NO es un chat del historial y hay mensajes, guardar antes de limpiar
     if (!this._isHistoryChat) {
       const currentMessages = await this._chatManager.getAllMessages();
       if (currentMessages.length > 0) {
         const oldChatId = Date.now().toString();
         await this._storage.saveChat(oldChatId, currentMessages);
       }
-      // Limpiar la conversación solo si no es del historial
       await this._chatManager.clearConversation();
-    }
-    // Si es del historial, solo resetear los mensajes pero mantener el mismo ID
-    else {
+    } else {
       await this._chatManager.clearMessages();
     }
   }
@@ -125,6 +123,7 @@ export class OllamaService {
     messages: Message[];
     totalPages: number;
     currentPage: number;
+    hasMore: boolean;
   }> {
     return await this._chatManager.getCurrentMessages(page);
   }
@@ -147,10 +146,10 @@ export class OllamaService {
       await this.sendToOllama(userMessage, selectedFiles, view);
 
       // Guardar la conversación actualizada
-      const updatedMessages = await this._chatManager.getAllMessages();
+      const currentMessages = await this._chatManager.getAllMessages();
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
-        updatedMessages
+        currentMessages
       );
     } catch (error) {
       console.error("Error editing message:", error);

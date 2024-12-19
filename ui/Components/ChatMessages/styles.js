@@ -175,4 +175,10 @@ export const styles = {
       fontStyle: 'italic',
     },
   },
+  loadingMore: {
+    padding: "8px",
+    textAlign: "center",
+    color: "var(--vscode-descriptionForeground)",
+    fontSize: "0.9em",
+  },
 };

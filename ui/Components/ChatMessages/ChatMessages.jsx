@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, memo } from "react";
+import React, { useRef, useEffect, memo, useCallback } from "react";
 import { styles } from "./styles";
 import { UserMessage } from "./Message/UserMessage";
 import { AIMessage } from "./Message/AIMessage";
@@ -12,14 +12,20 @@ const Message = memo(({ message, messageIndex, onEdit }) => {
   );
 });
 
-// Componente principal de mensajes
 const ChatMessages = ({ children }) => {
   const { 
     messages, 
     isLoading, 
     currentMessage,
-    handleSendMessage
+    handleSendMessage,
+    loadMoreMessages,
+    isLoadingMore,
+    hasMoreMessages
   } = useAppContext();
+
+  const containerRef = useRef(null);
+  const lastMessageRef = useRef(null);
+  const observerRef = useRef(null);
 
   const handleEditMessage = (messageIndex, newText, attachedFiles) => {
     const updatedMessages = [...messages];
@@ -31,18 +37,55 @@ const ChatMessages = ({ children }) => {
     handleSendMessage(newText, attachedFiles || []);
   };
 
+  const handleScroll = useCallback((entries) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && hasMoreMessages && !isLoadingMore) {
+      loadMoreMessages();
+    }
+  }, [hasMoreMessages, isLoadingMore, loadMoreMessages]);
+
+  useEffect(() => {
+    if (!lastMessageRef.current) return;
+
+    observerRef.current = new IntersectionObserver(handleScroll, {
+      root: containerRef.current,
+      threshold: 0.5,
+    });
+
+    observerRef.current.observe(lastMessageRef.current);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [handleScroll]);
+
   return (
-    <div style={styles.container}>
+    <div ref={containerRef} style={styles.chatContainer}>
+      {isLoadingMore && (
+        <div style={styles.loadingMore}>
+          Cargando mensajes anteriores...
+        </div>
+      )}
+      
       {messages.map((message, index) => (
-        <Message
+        <div
           key={index}
-          message={message}
-          onEdit={(newText, files) => handleEditMessage(index, newText, files)}
-        />
+          ref={index === messages.length - 1 ? lastMessageRef : null}
+        >
+          <Message
+            message={message}
+            messageIndex={index}
+            onEdit={(newText, files) => handleEditMessage(index, newText, files)}
+          />
+        </div>
       ))}
+      
       {isLoading && currentMessage && (
         <Message message={{ text: currentMessage, isUser: false }} />
       )}
+      
       {messages.length === 0 && !isLoading && children}
     </div>
   );
