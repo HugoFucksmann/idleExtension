@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from 'react';
+import { useAppContext } from '../context/AppContext';
 
 const styles = {
   container: {
@@ -24,7 +25,7 @@ const styles = {
     overflowY: "auto",
     padding: "10px",
   },
-  chatItem: {
+  item: {
     padding: "10px",
     margin: "5px 0",
     borderRadius: "4px",
@@ -33,9 +34,6 @@ const styles = {
     backgroundColor: "var(--vscode-editor-background)",
     transition: "background-color 0.2s",
     userSelect: "none",
-  },
-  chatItemHover: {
-    backgroundColor: "var(--vscode-list-hoverBackground)",
   },
   timestamp: {
     fontSize: "12px",
@@ -58,8 +56,15 @@ const styles = {
   },
 };
 
-function ChatHistory({ history, onChatSelect, setShowHistory }) {
-  const [hoveredId, setHoveredId] = useState(null);
+const ChatHistory = () => {
+  const { 
+    history, 
+    handleLoadChat, 
+    showHistory, 
+    setShowHistory 
+  } = useAppContext();
+
+  if (!showHistory) return null;
 
   const handleClose = () => {
     setShowHistory(false);
@@ -70,15 +75,13 @@ function ChatHistory({ history, onChatSelect, setShowHistory }) {
   };
 
   const handleChatClick = (chatId) => {
-    if (onChatSelect) {
-      onChatSelect(chatId);
-    }
+    handleLoadChat(chatId);
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h3>Historial de Chats</h3>
+        <h2>Historial de Chats</h2>
         <button style={styles.button} onClick={handleClose}>
           Cerrar
         </button>
@@ -87,15 +90,8 @@ function ChatHistory({ history, onChatSelect, setShowHistory }) {
         {history.map((chat) => (
           <div
             key={chat.id}
-            style={{
-              ...styles.chatItem,
-              ...(hoveredId === chat.id ? styles.chatItemHover : {}),
-            }}
+            style={styles.item}
             onClick={() => handleChatClick(chat.id)}
-            onMouseEnter={() => setHoveredId(chat.id)}
-            onMouseLeave={() => setHoveredId(null)}
-            role="button"
-            tabIndex={0}
           >
             <div style={styles.summary}>
               {chat.summary || (chat.messages[0]?.content?.slice(0, 100) + "...") || "Chat sin título"}
@@ -111,6 +107,6 @@ function ChatHistory({ history, onChatSelect, setShowHistory }) {
       </div>
     </div>
   );
-}
+};
 
 export default ChatHistory;

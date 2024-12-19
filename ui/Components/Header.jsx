@@ -1,5 +1,4 @@
 import React from "react";
-import { HistoryIcon, NewChatIcon, CloseIcon } from "./InputChat/Icons";
 import { useAppContext } from "../context/AppContext";
 
 const styles = {
@@ -32,52 +31,30 @@ const styles = {
   },
 };
 
-function Header({ onNewChat, onShowHistory, isNewChat }) {
-  const { vscode } = useAppContext();
-
-  const handleNewChat = () => {
-    if (onNewChat) {
-      onNewChat();
-    }
-  };
-
-  const handleClose = () => {
-    vscode.postMessage({ type: "closePanel" });
-  };
-
-  const handleHistory = () => {
-    if (onShowHistory) {
-      onShowHistory();
-    }
-  };
+const Header = () => {
+  const { 
+    clearChat, 
+    handleShowHistory, 
+    isNewChat 
+  } = useAppContext();
 
   return (
-    <div style={styles.header}>
-      <div style={styles.buttonsContainer}>
-        <button
-          style={styles.button}
-          onClick={handleHistory}
-          title="Ver historial"
-        >
-          <HistoryIcon />
-        </button>
-        <button
-          style={styles.button}
-          onClick={handleNewChat}
-          title="Nuevo chat"
-        >
-          <NewChatIcon />
-        </button>
-      </div>
-      <button
-        style={{ ...styles.button, ...styles.closeButton }}
-        onClick={handleClose}
-        title="Cerrar"
+    <header style={styles.header}>
+      <button 
+        onClick={clearChat}
+        style={styles.button}
+        disabled={isNewChat}
       >
-        <CloseIcon />
+        New Chat
       </button>
-    </div>
+      <button 
+        onClick={handleShowHistory}
+        style={styles.button}
+      >
+        History
+      </button>
+    </header>
   );
-}
+};
 
 export default Header;

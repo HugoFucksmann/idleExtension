@@ -2,6 +2,7 @@ import React, { useRef, useEffect, memo } from "react";
 import { styles } from "./styles";
 import { UserMessage } from "./Message/UserMessage";
 import { AIMessage } from "./Message/AIMessage";
+import { useAppContext } from '../../context/AppContext';
 
 const Message = memo(({ message, messageIndex, onEdit }) => {
   return message.isUser ? (
@@ -12,46 +13,37 @@ const Message = memo(({ message, messageIndex, onEdit }) => {
 });
 
 // Componente principal de mensajes
-const ChatMessages = ({ messages, isLoading, currentMessage, onEditMessage, children }) => {
-  const chatContainerRef = useRef(null);
+const ChatMessages = ({ children }) => {
+  const { 
+    messages, 
+    isLoading, 
+    currentMessage,
+    handleSendMessage
+  } = useAppContext();
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      const scrollToBottom = () => {
-        const { scrollHeight, clientHeight } = chatContainerRef.current;
-        chatContainerRef.current.scrollTo({
-          top: scrollHeight - clientHeight,
-          behavior: 'smooth'
-        });
-      };
-      scrollToBottom();
-    }
-  }, [messages, currentMessage]);
-
-  if (!messages || messages.length === 0) {
-    return children ? (
-      <div style={styles.emptyContainer}>{children}</div>
-    ) : null;
-  }
+  const handleEditMessage = (messageIndex, newText, attachedFiles) => {
+    const updatedMessages = [...messages];
+    updatedMessages[messageIndex] = {
+      ...updatedMessages[messageIndex],
+      text: newText,
+      attachedFiles: attachedFiles || []
+    };
+    handleSendMessage(newText, attachedFiles || []);
+  };
 
   return (
-    <div ref={chatContainerRef} style={styles.chatContainer}>
-      {messages.map((msg, index) => (
+    <div style={styles.container}>
+      {messages.map((message, index) => (
         <Message
-          key={`${index}-${msg.text}`}
-          message={msg}
-          messageIndex={index}
-          onEdit={onEditMessage}
+          key={index}
+          message={message}
+          onEdit={(newText, files) => handleEditMessage(index, newText, files)}
         />
       ))}
       {isLoading && currentMessage && (
-        <Message
-          message={{
-            text: currentMessage,
-            isUser: false,
-          }}
-        />
+        <Message message={{ text: currentMessage, isUser: false }} />
       )}
+      {messages.length === 0 && !isLoading && children}
     </div>
   );
 };
