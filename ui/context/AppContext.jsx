@@ -38,7 +38,7 @@ export const AppProvider = ({ children, vscode }) => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [history, setHistory] = useState([]);
-  const [isNewChat, setIsNewChat] = useState(true);
+ 
   const [showHistory, setShowHistory] = useState(false);
   const [projectFiles, setProjectFiles] = useState([]);
 
@@ -116,9 +116,9 @@ export const AppProvider = ({ children, vscode }) => {
     setCurrentMessage("");
     setInput("");
     setSelectedFiles([]);
-    setIsNewChat(true);
+  
     dispatchLoading({ type: 'RESET' });
-    vscode.postMessage({ type: "loadHistory" });
+    vscode.postMessage({ type: "clearConversation" });
   }, [vscode]);
 
   const handleShowHistory = useCallback(() => {
@@ -164,7 +164,7 @@ export const AppProvider = ({ children, vscode }) => {
             const transformedMessages = message.messages.map(transformMessage);
             setMessages(transformedMessages);
             dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: false });
-            setIsNewChat(false);
+      
           }
           break;
         case "historyLoaded":
@@ -176,17 +176,22 @@ export const AppProvider = ({ children, vscode }) => {
           dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: false });
           break;
         case "conversationCleared":
-          clearChat();
+          setMessages([]);
+          setCurrentMessage("");
+          setInput("");
+          setSelectedFiles([]);
+     
+          dispatchLoading({ type: 'RESET' });
           break;
         case "projectFiles":
-          // Handle project files if needed
+          setProjectFiles(message.files);
           break;
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleResponseMessage, handleErrorMessage, clearChat, transformMessage]);
+  }, [handleResponseMessage, handleErrorMessage, transformMessage]);
 
   // Initialize on mount
   useEffect(() => {
@@ -220,7 +225,7 @@ export const AppProvider = ({ children, vscode }) => {
     clearChat,
     history,
     setHistory,
-    isNewChat,
+
     showHistory,
     setShowHistory,
     projectFiles

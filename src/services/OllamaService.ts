@@ -11,6 +11,7 @@ export class OllamaService {
   private _chatManager: ChatManager;
   private _api: OllamaAPI;
   private _fileSystemAgent: FileSystemAgent;
+  private _isHistoryChat: boolean = false;
 
   constructor(context: vscode.ExtensionContext) {
     this._storage = new ChatHistoryStorage(context);
@@ -31,13 +32,22 @@ export class OllamaService {
           selectedFiles
         );
 
+      // Si es una conversación nueva (sin mensajes), guardar inmediatamente
+      const isNewConversation = this._chatManager.getCurrentMessages().length === 0;
+      if (isNewConversation && !this._isHistoryChat) {
+        await this._storage.saveChat(
+          this._chatManager.getCurrentChatId(),
+          []
+        );
+      }
+
       // Agregar mensaje del usuario
       this._chatManager.addMessage({
         role: "user",
         content: messageWithContext,
       });
 
-      // Guardar inmediatamente después del mensaje del usuario
+      // Guardar después del mensaje del usuario
       await this._storage.saveChat(
         this._chatManager.getCurrentChatId(),
         this._chatManager.getCurrentMessages()
@@ -81,6 +91,7 @@ export class OllamaService {
       if (chat) {
         this._chatManager.setCurrentChatId(chatId);
         this._chatManager.setConversation(chat.messages);
+        this._isHistoryChat = true;
         return true;
       }
       return false;
@@ -90,8 +101,21 @@ export class OllamaService {
     }
   }
 
-  clearConversation(): void {
-    this._chatManager.clearConversation();
+  async clearConversation(): Promise<void> {
+    // Si NO es un chat del historial y hay mensajes, guardar antes de limpiar
+    if (!this._isHistoryChat) {
+      const currentMessages = this._chatManager.getCurrentMessages();
+      if (currentMessages.length > 0) {
+        const oldChatId = Date.now().toString();
+        await this._storage.saveChat(oldChatId, currentMessages);
+      }
+      // Limpiar la conversación solo si no es del historial
+      this._chatManager.clearConversation();
+    }
+    // Si es del historial, solo resetear los mensajes pero mantener el mismo ID
+    else {
+      this._chatManager.clearMessages();
+    }
   }
 
   getCurrentMessages(): Message[] {

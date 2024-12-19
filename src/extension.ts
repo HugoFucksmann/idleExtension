@@ -9,7 +9,7 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.registerWebviewViewProvider("aiChat.chatView", provider)
     );
     
-    console.log('AI Chat Extension activated successfully');
+   
   } catch (error: any) {
     console.error('Error activating AI Chat Extension:', error);
     const errorMessage = error?.message || 'Unknown error occurred';

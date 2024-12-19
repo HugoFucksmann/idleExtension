@@ -12,9 +12,14 @@ export class ChatManager {
     this._conversationHistory.push(message);
   }
 
+  clearMessages(): void {
+    this._conversationHistory = [];
+  }
+
   clearConversation(): void {
     this._conversationHistory = [];
-    this._currentChatId = Date.now().toString();
+    // Asegurarnos de que el nuevo ID sea único usando timestamp + random
+    this._currentChatId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 
   setConversation(messages: Message[]): void {

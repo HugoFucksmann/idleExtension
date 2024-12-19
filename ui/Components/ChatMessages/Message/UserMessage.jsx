@@ -23,7 +23,7 @@ export const UserMessage = ({ message, onEdit, messageIndex }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(message.text);
   const textareaRef = useRef(null);
-  console.log(message);
+ 
 
   const handleEdit = () => {
     setIsEditing(true);

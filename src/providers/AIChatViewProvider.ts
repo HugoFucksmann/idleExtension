@@ -53,10 +53,12 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
           this._view
         );
         break;
-      case "clearConversation":
-        this._ollamaService.clearConversation();
-        this._view?.webview.postMessage({ type: "conversationCleared" });
-        break;
+        case "clearConversation":
+          await this._ollamaService.clearConversation();
+          this._view?.webview.postMessage({ type: "conversationCleared" });
+          // Cargar el historial actualizado después de limpiar
+          await this.loadHistory();
+          break;
       case "closePanel":
         vscode.commands.executeCommand("workbench.action.closeSidebar");
         break;

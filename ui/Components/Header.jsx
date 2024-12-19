@@ -35,15 +35,16 @@ const Header = () => {
   const { 
     clearChat, 
     handleShowHistory, 
-    isNewChat 
+
   } = useAppContext();
+
 
   return (
     <header style={styles.header}>
       <button 
         onClick={clearChat}
         style={styles.button}
-        disabled={isNewChat}
+     
       >
         New Chat
       </button>
