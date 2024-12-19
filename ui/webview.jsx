@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import ReactDOM from "react-dom";
 import Header from "./Components/Header";
 import ChatInput from "./Components/InputChat/ChatInput";
@@ -26,63 +26,18 @@ const styles = {
 function Chat() {
   const {
     messages,
-    setMessages,
-    currentMessage,
     isLoading,
-    isLoadingHistory,
-    setIsLoadingHistory,
-    handleResponseMessage,
-    handleErrorMessage,
-    clearChat,
-    vscode,
+    currentMessage,
     handleSendMessage,
-    handleLoadChat
+    clearChat,
+    handleShowHistory,
+    handleChatSelect,
+    showHistory,
+    setShowHistory,
+    history,
+    isNewChat,
+    setMessages
   } = useAppContext();
-  
-  const [showHistory, setShowHistory] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [isNewChat, setIsNewChat] = useState(true);
-  const [projectFiles, setProjectFiles] = useState([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    console.log("[Webview] Initializing projectFiles state");
-    
-    const handleProjectFiles = (event) => {
-      const message = event.data;
-      if (message.type === "projectFiles") {
-        console.log("[Webview] Received project files:", message.files);
-        setProjectFiles(message.files);
-      }
-    };
-
-    window.addEventListener("message", handleProjectFiles);
-    
-    // Solicitar archivos del proyecto al iniciar
-    console.log("[Webview] Requesting project files");
-    vscode.postMessage({ type: "getProjectFiles" });
-
-    return () => window.removeEventListener("message", handleProjectFiles);
-  }, []);
-
-  useEffect(() => {
-    console.log("[Webview] Project files updated:", {
-      count: projectFiles.length,
-      files: projectFiles
-    });
-  }, [projectFiles]);
-
-  const transformMessage = (message) => {
-    if (message.role) {
-      // Transformar del formato backend al formato frontend
-      return {
-        text: message.content,
-        isUser: message.role === "user",
-        attachedFiles: []  // Los archivos adjuntos se manejan por separado
-      };
-    }
-    return message;
-  };
 
   const handleEditMessage = (messageIndex, newText, attachedFiles) => {
     const updatedMessages = [...messages];
@@ -95,91 +50,10 @@ function Chat() {
     handleSendMessage(newText, attachedFiles || []);
   };
 
-  // Cargar historial inicial
-  useEffect(() => {
-    if (!isInitialized && !isLoadingHistory) {
-      setIsInitialized(true);
-      setIsLoadingHistory(true);
-      vscode.postMessage({ type: "loadHistory" });
-    }
-  }, [isInitialized, isLoadingHistory]);
-
-  const handleChatSelect = (chatId) => {
-    if (!isLoadingHistory) {
-      setIsLoadingHistory(true);
-      setShowHistory(false); // Cerrar el historial inmediatamente
-      vscode.postMessage({
-        type: "loadChat",
-        chatId: chatId,
-      });
-    }
-  };
-
-  const handleNewChat = () => {
-    if (!isLoadingHistory) {
-      vscode.postMessage({ type: "clearConversation" });
-    }
-  };
-
-  const handleShowHistory = () => {
-    if (!isLoadingHistory) {
-      setShowHistory(true);
-      setIsLoadingHistory(true);
-      vscode.postMessage({ type: "loadHistory" });
-    }
-  };
-
-  useEffect(() => {
-    const handleMessage = (event) => {
-      const message = event.data;
-      switch (message.type) {
-        case "response":
-          handleResponseMessage(message);
-          break;
-        case "error":
-          handleErrorMessage(message);
-          break;
-        case "conversationCleared":
-          clearChat();
-          setIsNewChat(true);
-          if (!isLoadingHistory) {
-            setIsLoadingHistory(true);
-            vscode.postMessage({ type: "loadHistory" });
-          }
-          break;
-        case "chatLoaded":
-          if (message.messages && Array.isArray(message.messages)) {
-            const transformedMessages = message.messages.map(transformMessage);
-            setMessages(transformedMessages);
-            setIsLoadingHistory(false);
-            setIsNewChat(false);
-          } else {
-            console.error("Invalid messages format:", message);
-            setIsLoadingHistory(false);
-          }
-          break;
-        case "historyLoaded":
-          if (message.history && Array.isArray(message.history)) {
-            setHistory(message.history);
-          } else {
-            setHistory([]);
-          }
-          setIsLoadingHistory(false);
-          break;
-        case "showHistory":
-          setShowHistory(true);
-          break;
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [handleResponseMessage, handleErrorMessage, clearChat, vscode, isLoadingHistory]);
-
   return (
     <div style={styles.container}>
       <Header
-        onNewChat={handleNewChat}
+        onNewChat={clearChat}
         onShowHistory={handleShowHistory}
         isNewChat={isNewChat}
       />
@@ -201,10 +75,7 @@ function Chat() {
               <RecentChats history={history} onChatSelect={handleChatSelect} />
             )}
           </ChatMessages>
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            projectFiles={projectFiles}
-          />
+          <ChatInput />
         </div>
       )}
     </div>

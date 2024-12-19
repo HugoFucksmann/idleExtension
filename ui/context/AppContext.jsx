@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useReducer } from "react";
 
 const AppContext = createContext();
 
@@ -10,25 +10,58 @@ export const useAppContext = () => {
   return context;
 };
 
+// Reducer para manejar estados de carga
+const loadingReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_HISTORY_LOADING':
+      return { ...state, isLoadingHistory: action.payload };
+    case 'SET_INITIALIZED':
+      return { ...state, isInitialized: action.payload };
+    case 'RESET':
+      return { isLoading: false, isLoadingHistory: false, isInitialized: true };
+    default:
+      return state;
+  }
+};
+
 export const AppProvider = ({ children, vscode }) => {
   const [input, setInput] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [loadingState, dispatchLoading] = useReducer(loadingReducer, {
+    isLoading: false,
+    isLoadingHistory: false,
+    isInitialized: false
+  });
   const [mode, setMode] = useState("chat");
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [chatId, setChatId] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [isNewChat, setIsNewChat] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [projectFiles, setProjectFiles] = useState([]);
 
-  const handleSendMessage = async (message, files) => {
-    if ((message.trim() !== "" || files.length > 0) && !isLoading) {
+  const transformMessage = useCallback((message) => {
+    if (message.role) {
+      return {
+        text: message.content,
+        isUser: message.role === "user",
+        attachedFiles: []
+      };
+    }
+    return message;
+  }, []);
+
+  const handleSendMessage = useCallback(async (message, files) => {
+    if ((message.trim() !== "" || files.length > 0) && !loadingState.isLoading) {
       setMessages(prev => [...prev, {
         text: message,
         isUser: true,
         attachedFiles: files
       }]);
 
-      setIsLoading(true);
+      dispatchLoading({ type: 'SET_LOADING', payload: true });
       try {
         vscode.postMessage({
           type: "sendMessage",
@@ -38,22 +71,25 @@ export const AppProvider = ({ children, vscode }) => {
         });
       } catch (error) {
         console.error("Error sending message:", error);
-        setIsLoading(false);
+        dispatchLoading({ type: 'SET_LOADING', payload: false });
       }
       setInput("");
       setSelectedFiles([]);
     }
-  };
+  }, [loadingState.isLoading, mode, vscode]);
 
-  const handleLoadChat = (chatId) => {
-    setIsLoadingHistory(true);
-    vscode.postMessage({
-      type: "loadChat",
-      chatId: chatId,
-    });
-  };
+  const handleLoadChat = useCallback((chatId) => {
+    if (!loadingState.isLoadingHistory) {
+      dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: true });
+      setShowHistory(false);
+      vscode.postMessage({
+        type: "loadChat",
+        chatId: chatId,
+      });
+    }
+  }, [loadingState.isLoadingHistory, vscode]);
 
-  const handleResponseMessage = (message) => {
+  const handleResponseMessage = useCallback((message) => {
     if (!message.done) {
       setCurrentMessage(message.message);
     } else {
@@ -61,43 +97,58 @@ export const AppProvider = ({ children, vscode }) => {
         ...prevMessages,
         { text: message.message, isUser: false }
       ]);
-      setIsLoading(false);
+      dispatchLoading({ type: 'SET_LOADING', payload: false });
       setCurrentMessage("");
     }
-  };
+  }, []);
 
-  const handleErrorMessage = (message) => {
+  const handleErrorMessage = useCallback((message) => {
     setMessages(prev => [
       ...prev,
       { text: message.message, isUser: false, isError: true }
     ]);
-    setIsLoading(false);
+    dispatchLoading({ type: 'SET_LOADING', payload: false });
     setCurrentMessage("");
-  };
+  }, []);
 
-  const handleFileSelect = (file) => {
-    if (!selectedFiles.includes(file)) {
-      setSelectedFiles(prev => [...prev, file]);
-    }
-  };
-
-  const handleRemoveFile = (file) => {
-    setSelectedFiles(prev => prev.filter(f => f !== file));
-  };
-
-  const handleModeChange = (newMode) => {
-    setMode(newMode);
-  };
-
-  const clearChat = () => {
-    vscode.postMessage({ type: "clearConversation" });
+  const clearChat = useCallback(() => {
     setMessages([]);
     setCurrentMessage("");
     setInput("");
     setSelectedFiles([]);
-    setIsLoading(false);
-  };
+    setIsNewChat(true);
+    dispatchLoading({ type: 'RESET' });
+    vscode.postMessage({ type: "loadHistory" });
+  }, [vscode]);
 
+  const handleShowHistory = useCallback(() => {
+    if (!loadingState.isLoadingHistory) {
+      setShowHistory(true);
+      dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: true });
+      vscode.postMessage({ type: "loadHistory" });
+    }
+  }, [loadingState.isLoadingHistory, vscode]);
+
+  useEffect(() => {
+    console.log("[AppContext] Initializing projectFiles state");
+    
+    const handleProjectFiles = (event) => {
+      const message = event.data;
+      if (message.type === "projectFiles") {
+        console.log("[AppContext] Received project files:", message.files);
+        setProjectFiles(message.files);
+      }
+    };
+
+    window.addEventListener("message", handleProjectFiles);
+    
+    console.log("[AppContext] Requesting project files");
+    vscode.postMessage({ type: "getProjectFiles" });
+
+    return () => window.removeEventListener("message", handleProjectFiles);
+  }, [vscode]);
+
+  // Unified message handler
   useEffect(() => {
     const handleMessage = (event) => {
       const message = event.data;
@@ -109,18 +160,42 @@ export const AppProvider = ({ children, vscode }) => {
           handleErrorMessage(message);
           break;
         case "chatLoaded":
-          setMessages(message.messages);
-          setIsLoadingHistory(false);
+          if (message.messages && Array.isArray(message.messages)) {
+            const transformedMessages = message.messages.map(transformMessage);
+            setMessages(transformedMessages);
+            dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: false });
+            setIsNewChat(false);
+          }
+          break;
+        case "historyLoaded":
+          if (message.history && Array.isArray(message.history)) {
+            setHistory(message.history);
+          } else {
+            setHistory([]);
+          }
+          dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: false });
           break;
         case "conversationCleared":
           clearChat();
+          break;
+        case "projectFiles":
+          // Handle project files if needed
           break;
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [handleResponseMessage, handleErrorMessage, clearChat, transformMessage]);
+
+  // Initialize on mount
+  useEffect(() => {
+    if (!loadingState.isInitialized && !loadingState.isLoadingHistory) {
+      dispatchLoading({ type: 'SET_INITIALIZED', payload: true });
+      dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: true });
+      vscode.postMessage({ type: "loadHistory" });
+    }
+  }, [loadingState.isInitialized, loadingState.isLoadingHistory, vscode]);
 
   const value = {
     vscode,
@@ -128,9 +203,10 @@ export const AppProvider = ({ children, vscode }) => {
     setInput,
     selectedFiles,
     setSelectedFiles,
-    isLoading,
-    isLoadingHistory,
-    setIsLoadingHistory,
+    isLoading: loadingState.isLoading,
+    isLoadingHistory: loadingState.isLoadingHistory,
+    setIsLoadingHistory: (value) => 
+      dispatchLoading({ type: 'SET_HISTORY_LOADING', payload: value }),
     mode,
     setMode,
     messages,
@@ -139,14 +215,15 @@ export const AppProvider = ({ children, vscode }) => {
     handleSendMessage,
     handleResponseMessage,
     handleErrorMessage,
-    handleFileSelect,
     handleLoadChat,
-    clearChat: () => {
-      setMessages([]);
-      setCurrentMessage("");
-      setInput("");
-      setSelectedFiles([]);
-    },
+    handleShowHistory,
+    clearChat,
+    history,
+    setHistory,
+    isNewChat,
+    showHistory,
+    setShowHistory,
+    projectFiles
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

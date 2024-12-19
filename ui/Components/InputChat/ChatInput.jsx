@@ -35,8 +35,6 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   const handleFileSelect = (file) => {
     console.log("[FileSelector] File selected:", file);
     onFileSelect(file);
-    // No cerramos el dropdown para permitir selecciones múltiples
-    // Solo limpiamos el término de búsqueda para una mejor experiencia
     setSearchTerm("");
   };
 
@@ -102,9 +100,7 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
                 </li>
               ))
             ) : (
-              <li style={styles.fileItem}>
-                {searchTerm ? "No matching files" : "No files available"}
-              </li>
+              <li style={styles.noFiles}>No files available</li>
             )}
           </ul>
         </div>
@@ -113,106 +109,64 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   );
 });
 
-// ModeSwitch Component
-const ModeSwitch = memo(({ mode, onModeChange }) => (
-  <div style={styles.modeSwitch}>
-    <button
-      onClick={() => onModeChange("write")}
-      style={{
-        ...styles.modeButton,
-        ...(mode === "write" ? styles.activeMode : styles.inactiveMode),
-      }}
-    >
-      <WriteIcon />
-      Write
-    </button>
-    <button
-      onClick={() => onModeChange("chat")}
-      style={{
-        ...styles.modeButton,
-        ...(mode === "chat" ? styles.activeMode : styles.inactiveMode),
-      }}
-    >
-      <ChatIcon />
-      Chat
-    </button>
-  </div>
-));
-
-// Main ChatInput Component
-const ChatInput = ({ projectFiles }) => {
+const ChatInput = () => {
   const {
     input,
     setInput,
-    selectedFiles,
-    isLoading,
-    mode,
-    handleModeChange,
     handleSendMessage,
-    handleFileSelect,
-    handleRemoveFile
+    selectedFiles,
+    setSelectedFiles,
+    projectFiles
   } = useAppContext();
+  
+  const textareaRef = useRef(null);
+  useTextareaResize(textareaRef);
 
-  const handleResize = useTextareaResize();
-
-  const handleTextareaChange = (e) => {
-    setInput(e.target.value);
-    handleResize(e.target);
-  };
-
-  const handleSendClick = () => {
-    if (input.trim() || selectedFiles.length > 0) {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (input.trim() !== "" || selectedFiles.length > 0) {
       handleSendMessage(input, selectedFiles);
-      const textarea = document.querySelector("textarea");
-      if (textarea) textarea.style.height = "auto";
     }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendClick();
+      handleSubmit(e);
     }
+  };
+
+  const handleFileSelect = (file) => {
+    if (!selectedFiles.includes(file)) {
+      setSelectedFiles(prev => [...prev, file]);
+    }
+  };
+
+  const handleFileRemove = (file) => {
+    setSelectedFiles(prev => prev.filter(f => f !== file));
   };
 
   return (
     <div style={styles.container}>
       <FileSelector
         files={selectedFiles}
-        onRemove={handleRemoveFile}
+        onRemove={handleFileRemove}
         projectFiles={projectFiles}
         onFileSelect={handleFileSelect}
       />
-      <div style={styles.textareaContainer}>
+      <form onSubmit={handleSubmit} style={styles.form}>
         <textarea
+          ref={textareaRef}
           value={input}
-          onChange={handleTextareaChange}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={mode === "write" ? "Write something..." : "Ask something..."}
-          disabled={isLoading}
-          rows={1}
-          style={{
-            ...styles.textarea,
-            ...(isLoading && styles.disabled),
-          }}
+          placeholder="Type your message..."
+          style={styles.textarea}
         />
-        <button
-          onClick={handleSendClick}
-          disabled={isLoading}
-          style={{
-            ...styles.sendButton,
-            ...(isLoading && styles.disabled),
-            ...(!input.trim() && !selectedFiles.length && styles.inactive),
-          }}
-          title="Send message (Enter)"
-        >
+        <button type="submit" style={styles.button} title="Send message">
           <EnterIcon />
         </button>
-      </div>
-
-      <div style={styles.actionsRow}>
-        <ModeSwitch mode={mode} onModeChange={handleModeChange} />
-      </div>
+      </form>
     </div>
   );
 };
