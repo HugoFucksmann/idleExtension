@@ -163,6 +163,22 @@ export const styles = {
     color: "var(--vscode-foreground)",
   },
 
+  // ModelSelector styles
+  modelSelector: {
+    marginBottom: '8px',
+    width: '100%',
+  },
+  select: {
+    width: '100%',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    border: '1px solid var(--vscode-input-border)',
+    backgroundColor: 'var(--vscode-input-background)',
+    color: 'var(--vscode-input-foreground)',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+
   // States
   disabled: {
     opacity: 0.5,

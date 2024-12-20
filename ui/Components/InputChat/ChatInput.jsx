@@ -102,26 +102,28 @@ const FileSelector = memo(({ files, onRemove, projectFiles, onFileSelect }) => {
   );
 });
 
-const ChatInput = () => {
-  const { 
-    input, 
-    setInput, 
-    selectedFiles, 
+const ChatInput = memo(() => {
+  const {
+    input,
+    setInput,
+    selectedFiles,
     setSelectedFiles,
-    handleSendMessage,
+    projectFiles,
     isLoading,
-    projectFiles
+    sendMessage,
+    currentMessage,
   } = useAppContext();
+  const [model, setModel] = useState("ollama");
 
   const textareaRef = useRef(null);
   const { textareaHeight } = useTextareaResize(textareaRef, input);
 
-  const handleSubmit = useCallback((e) => {
-    e?.preventDefault();
-    if ((input.trim() || selectedFiles.length > 0) && !isLoading) {
-      handleSendMessage(input.trim(), selectedFiles);
-    }
-  }, [input, selectedFiles, isLoading, handleSendMessage]);
+  const handleSubmit = useCallback(async () => {
+    if (!input.trim() && selectedFiles.length === 0) return;
+    await sendMessage(input, selectedFiles, model);
+    setInput("");
+    setSelectedFiles([]);
+  }, [input, selectedFiles, sendMessage, setInput, setSelectedFiles, model]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -142,6 +144,16 @@ const ChatInput = () => {
 
   return (
     <div style={styles.container}>
+      <div style={styles.modelSelector}>
+        <select 
+          value={model} 
+          onChange={(e) => setModel(e.target.value)}
+          style={styles.select}
+        >
+          <option value="ollama">Ollama</option>
+          <option value="gemini">Gemini</option>
+        </select>
+      </div>
       <FileSelector
         files={selectedFiles}
         onRemove={handleFileRemove}
@@ -168,6 +180,6 @@ const ChatInput = () => {
       </div>
     </div>
   );
-};
+});
 
 export default ChatInput;

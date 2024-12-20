@@ -52,33 +52,55 @@ export const AppProvider = ({ children, vscode }) => {
     };
   }, []);
 
-  const handleSendMessage = useCallback(async (message, files = []) => {
-    if ((message.trim() || files.length > 0) && !loadingState.isLoading) {
-      const newMessage = {
-        text: message,
-        isUser: true,
-        tempId: `${Date.now()}-${Math.random()}`,
-        attachedFiles: files
-      };
-
-      setMessages(prev => [...prev, newMessage]);
-      dispatchLoading({ type: 'SET_LOADING', payload: true });
-
-      try {
-        vscode.postMessage({
-          type: MessageType.SEND_MESSAGE,
-          message: message.trim(),
-          selectedFiles: files
-        });
-      } catch (error) {
-        console.error("Error sending message:", error);
+  useEffect(() => {
+    const handleMessage = (event) => {
+      const message = event.data;
+      if (message.type === 'response') {
+        setMessages(prev => [
+          ...prev,
+          transformMessage({
+            role: "assistant",
+            content: message.content,
+            tempId: `${Date.now()}-response`
+          })
+        ]);
+        dispatchLoading({ type: 'SET_LOADING', payload: false });
+      } else if (message.type === 'error') {
+        vscode.window.showErrorMessage(`Error: ${message.content}`);
         dispatchLoading({ type: 'SET_LOADING', payload: false });
       }
+    };
 
-      setInput("");
-      setSelectedFiles([]);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [transformMessage]);
+
+  const sendMessage = useCallback(async (text, attachedFiles = [], model = "ollama") => {
+    if (loadingState.isLoading) return;
+
+    const tempId = `${Date.now()}-${Math.random()}`;
+    const userMessage = {
+      role: "user",
+      content: text,
+      tempId,
+      attachedFiles
+    };
+
+    setMessages(prev => [...prev, transformMessage(userMessage)]);
+    dispatchLoading({ type: 'SET_LOADING', payload: true });
+
+    try {
+      vscode.postMessage({
+        command: 'sendMessage',
+        text,
+        attachedFiles,
+        model
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      dispatchLoading({ type: 'SET_LOADING', payload: false });
     }
-  }, [loadingState.isLoading, vscode]);
+  }, [loadingState.isLoading, transformMessage]);
 
   const loadMoreMessages = useCallback(async () => {
     if (isLoadingMore || currentPage >= totalPages - 1) return;
@@ -235,7 +257,7 @@ export const AppProvider = ({ children, vscode }) => {
     isLoadingHistory: loadingState.isLoadingHistory,
     messages,
     currentMessage,
-    handleSendMessage,
+    sendMessage,
     handleLoadChat,
     handleShowHistory,
     clearChat,

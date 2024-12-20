@@ -4,19 +4,27 @@ import { getHtmlForWebview } from "../utils/webviewUtils";
 import { FileEditorAgent } from "../agents/FileEditorAgent";
 import { MessageBroker } from "../services/MessageBroker";
 import { MessageType } from "../types/types";
+import { OllamaAPI } from '../services/OllamaAPI';
+import { GeminiAPI } from '../services/GeminiAPI';
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "aiChat.chatView";
   private _view?: vscode.WebviewView;
+  private _extensionUri: vscode.Uri;
   private _ollamaService: OllamaService;
   private _messageBroker: MessageBroker;
+  private _ollamaAPI: OllamaAPI;
+  private _geminiAPI: GeminiAPI;
 
   constructor(
-    private readonly _extensionUri: vscode.Uri,
+    extensionUri: vscode.Uri,
     context: vscode.ExtensionContext
   ) {
+    this._extensionUri = extensionUri;
     this._ollamaService = new OllamaService(context);
     this._messageBroker = MessageBroker.getInstance();
+    this._ollamaAPI = new OllamaAPI();
+    this._geminiAPI = new GeminiAPI();
     this.setupEventHandlers();
   }
 
@@ -70,7 +78,26 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
 
   private async handleMessage(message: any) {
     try {
-      console.log('Received message in provider:', message); // Debug log
+      console.log('Received message in provider:', message);
+
+      if (message.command === 'sendMessage') {
+        const api = message.model === 'gemini' ? this._geminiAPI : this._ollamaAPI;
+        try {
+          const response = await api.generateResponse(message.text);
+          // Enviar la respuesta de vuelta al webview
+          this._view?.webview.postMessage({
+            type: 'response',
+            content: response
+          });
+        } catch (error: any) {
+          vscode.window.showErrorMessage(`Error: ${error.message}`);
+          this._view?.webview.postMessage({
+            type: 'error',
+            content: error.message
+          });
+        }
+        return;
+      }
 
       switch (message.type) {
         case MessageType.SEND_MESSAGE:

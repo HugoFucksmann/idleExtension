@@ -28,6 +28,16 @@
           "name": "AI Chat"
         }
       ]
+    },
+    "configuration": {
+      "title": "Idle Extension",
+      "properties": {
+        "idleExtension.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for Google's Gemini API"
+        }
+      }
     }
   },
   "scripts": {
