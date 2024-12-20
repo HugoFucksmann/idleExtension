@@ -18,7 +18,7 @@ export class OllamaService {
 
   constructor(context: vscode.ExtensionContext) {
     this._storage = new ChatHistoryStorage(context);
-    this._chatManager = new ChatManager();
+    this._chatManager = new ChatManager(context);
     this._api = new OllamaAPI();
     this._fileSystemAgent = new FileSystemAgent();
     this._messageBroker = MessageBroker.getInstance();
@@ -30,56 +30,74 @@ export class OllamaService {
     view: vscode.WebviewView | undefined
   ): Promise<void> {
     try {
+      console.log('OllamaService: Starting new message processing');
       this._messageBroker.setView(view);
 
-      const messageWithContext = await this._fileSystemAgent.prepareMessageWithContext(
+      const messageWithContext = await this.prepareMessageWithContext(
         userMessage,
         selectedFiles
       );
 
-      const currentMessagesResponse = await this._chatManager.getCurrentMessages();
-      const isNewConversation = currentMessagesResponse.messages.length === 0;
-      
-      if (isNewConversation && !this._isHistoryChat) {
-        await this._storage.saveChat(
-          this._chatManager.getCurrentChatId(),
-          []
-        );
-      }
-
-      await this._chatManager.addMessage({
-        role: "user",
-        content: messageWithContext,
-      });
-
-      const currentMessages = await this._chatManager.getAllMessages();
-      await this._storage.saveChat(
-        this._chatManager.getCurrentChatId(),
-        currentMessages
-      );
+      await this.saveUserMessage(messageWithContext);
 
       const conversationText = await this._chatManager.formatConversation();
-      const response = await this._api.generateResponse(
-        conversationText,
-       
-      );
+      const response = await this._api.generateResponse(conversationText);
 
       if (response) {
-        await this._chatManager.addMessage({ role: "assistant", content: response });
-        const updatedMessages = await this._chatManager.getAllMessages();
-        await this._storage.saveChat(
-          this._chatManager.getCurrentChatId(),
-          updatedMessages
-        );
+        await this.saveAssistantMessage(response);
       }
     } catch (error) {
-      console.error("Error in sendToOllama:", error);
+      console.error("OllamaService: Error in sendToOllama:", error);
       this._messageBroker.sendError(
         "Error al procesar el mensaje. Por favor, intente de nuevo.",
         "OLLAMA_SERVICE_ERROR",
         error
       );
     }
+  }
+
+  async prepareMessageWithContext(
+    userMessage: string,
+    selectedFiles: string[] = []
+  ): Promise<string> {
+    return await this._fileSystemAgent.prepareMessageWithContext(
+      userMessage,
+      selectedFiles
+    );
+  }
+
+  async saveUserMessage(content: string): Promise<void> {
+    console.log('OllamaService: Saving user message');
+    const currentMessagesResponse = await this._chatManager.getCurrentMessages();
+    const isNewConversation = currentMessagesResponse.messages.length === 0;
+    
+    if (isNewConversation && !this._isHistoryChat) {
+      console.log('OllamaService: Initializing new chat');
+      const chatId = this._chatManager.getCurrentChatId();
+      console.log('OllamaService: New chat ID:', chatId);
+      await this._storage.saveChat(chatId, []);
+    }
+
+    await this._chatManager.addMessage({
+      role: "user",
+      content: content,
+    });
+
+    const currentMessages = await this._chatManager.getAllMessages();
+    const chatId = this._chatManager.getCurrentChatId();
+    await this._storage.saveChat(chatId, currentMessages);
+  }
+
+  async saveAssistantMessage(content: string): Promise<void> {
+    console.log('OllamaService: Saving assistant message');
+    await this._chatManager.addMessage({
+      role: "assistant",
+      content: content,
+    });
+
+    const updatedMessages = await this._chatManager.getAllMessages();
+    const chatId = this._chatManager.getCurrentChatId();
+    await this._storage.saveChat(chatId, updatedMessages);
   }
 
   async loadChatHistory(): Promise<ChatHistory[]> {

@@ -1,17 +1,22 @@
+import * as vscode from 'vscode';
 import { Message } from "../types/types";
 import { IdGenerator } from "../utils/IdGenerator";
 import { AppConfig } from "../config/AppConfig";
 import { MessageBroker } from "./MessageBroker";
+import { ChatHistoryStorage } from "./ChatHistoryStorage";
 
 export class ChatManager {
   private _conversationHistory: Message[] = [];
   private _currentChatId: string;
   private _lock: Promise<void> = Promise.resolve();
   private _messageBroker: MessageBroker;
+  private _chatHistoryStorage: ChatHistoryStorage;
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
     this._currentChatId = IdGenerator.generate();
+    console.log('ChatManager: New chat initialized with ID:', this._currentChatId);
     this._messageBroker = MessageBroker.getInstance();
+    this._chatHistoryStorage = new ChatHistoryStorage(context);
   }
 
   private async withLock<T>(operation: () => Promise<T>): Promise<T> {
@@ -37,11 +42,25 @@ export class ChatManager {
 
   async addMessage(message: Message): Promise<void> {
     await this.withLock(async () => {
+      console.log('ChatManager: Adding message to chat:', this._currentChatId);
       const tempMessage = {
         ...message,
-        tempId: IdGenerator.generate()
+        tempId: IdGenerator.generate(),
+        timestamp: new Date().toISOString()
       };
       this._conversationHistory.push(tempMessage);
+
+      // Guardar inmediatamente en el almacenamiento persistente
+      try {
+        console.log('ChatManager: Saving chat after adding message');
+        await this._chatHistoryStorage.saveChat(
+          this._currentChatId,
+          this._conversationHistory
+        );
+      } catch (error) {
+        console.error("ChatManager: Error saving chat:", error);
+        await this._messageBroker.sendError("Error saving chat: " + (error instanceof Error ? error.message : String(error)));
+      }
     });
   }
 
@@ -87,8 +106,10 @@ export class ChatManager {
 
   async clearConversation(): Promise<void> {
     await this.withLock(async () => {
+      console.log('ChatManager: Clearing conversation and generating new chat ID');
       this._conversationHistory = [];
       this._currentChatId = IdGenerator.generate();
+      console.log('ChatManager: New chat ID:', this._currentChatId);
       await this._messageBroker.sendConversationCleared();
     });
   }
@@ -109,9 +130,7 @@ export class ChatManager {
   }
 
   async getAllMessages(): Promise<Message[]> {
-    return await this.withLock(async () => {
-      return [...this._conversationHistory];
-    });
+    return this._conversationHistory;
   }
 
   getCurrentChatId(): string {

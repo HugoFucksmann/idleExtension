@@ -2,6 +2,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   tempId?: string; // ID temporal opcional para manejo de duplicados
+  timestamp?: string;  // Nuevo campo para timestamp individual
 }
 
 export interface ChatHistory {
@@ -9,6 +10,8 @@ export interface ChatHistory {
   timestamp: string;
   messages: Message[];
   summary?: string;
+  title?: string;    // Nuevo campo para título
+  preview?: string;  // Nuevo campo para preview
 }
 
 export enum MessageType {
@@ -63,6 +66,11 @@ export interface EventPayload {
   [MessageType.PROJECT_FILES]: {
     files: string[];
   };
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
 }
 
 export type EventHandler<T extends MessageType> = (payload: EventPayload[T]) => void | Promise<void>;

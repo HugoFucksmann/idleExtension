@@ -81,15 +81,31 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       console.log('Received message in provider:', message);
 
       if (message.command === 'sendMessage') {
+        console.log('AIChatViewProvider: Processing sendMessage command with model:', message.model);
+        const messageWithContext = await this._ollamaService.prepareMessageWithContext(
+          message.text,
+          message.attachedFiles || []
+        );
+
+        // Guardar el mensaje del usuario
+        await this._ollamaService.saveUserMessage(messageWithContext);
+
+        // Generar y guardar la respuesta
         const api = message.model === 'gemini' ? this._geminiAPI : this._ollamaAPI;
         try {
-          const response = await api.generateResponse(message.text);
-          // Enviar la respuesta de vuelta al webview
+          const response = await api.generateResponse(messageWithContext);
+          console.log('AIChatViewProvider: Got response from model');
+          
+          // Guardar la respuesta del asistente
+          await this._ollamaService.saveAssistantMessage(response);
+          
+          // Enviar la respuesta al webview
           this._view?.webview.postMessage({
             type: 'response',
             content: response
           });
         } catch (error: any) {
+          console.error('AIChatViewProvider: Error generating response:', error);
           vscode.window.showErrorMessage(`Error: ${error.message}`);
           this._view?.webview.postMessage({
             type: 'error',
